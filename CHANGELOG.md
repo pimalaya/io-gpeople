@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed an error response that is not a Google JSON envelope rendering as its whole body, so a 404 answered with an HTML page surfaced as the page. `parse_api_error` now summarises such a body: the HTML `title` when it carries one, else the markup stripped, the whitespace collapsed and the length capped at 200 characters.
+
 ## [0.2.0] - 2026-07-16
 
 ### Changed

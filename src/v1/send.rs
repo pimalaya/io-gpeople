@@ -7,6 +7,7 @@
 use core::{fmt, marker::PhantomData};
 
 use alloc::{
+    format,
     string::{String, ToString},
     vec::Vec,
 };
@@ -290,11 +291,63 @@ pub fn parse_api_error(http_status: u16, body: &[u8]) -> (u16, String) {
         return (status, message);
     }
 
-    let message = String::from_utf8_lossy(body).trim().to_string();
+    let message = summarize_body(&String::from_utf8_lossy(body));
 
     if message.is_empty() {
         (http_status, String::from("unknown People API error"))
     } else {
         (http_status, message)
     }
+}
+
+/// Maximum length of a summarised error body, in characters.
+const SUMMARY_LEN: usize = 200;
+
+/// Boil a body that is not an error envelope down to one readable line.
+///
+/// Google answers some errors with an HTML page rather than its JSON
+/// envelope, and a whole page makes a poor error message. The page's own
+/// `title` says what happened, so it wins; failing that the markup is
+/// stripped, the whitespace collapsed and the result capped.
+fn summarize_body(body: &str) -> String {
+    let text = element_text(body, "title").unwrap_or_else(|| strip_markup(body));
+    let text = text.trim();
+
+    match text.char_indices().nth(SUMMARY_LEN) {
+        Some((end, _)) => format!("{}…", &text[..end]),
+        None => text.to_string(),
+    }
+}
+
+/// The trimmed text of the first `<local>` element, when it has any.
+fn element_text(body: &str, local: &str) -> Option<String> {
+    let open = format!("<{local}>");
+    let start = body.find(&open)? + open.len();
+    let rest = &body[start..];
+    let end = rest.find("</")?;
+    let text = rest[..end].trim();
+
+    (!text.is_empty()).then(|| text.to_string())
+}
+
+/// Drop every `<...>` tag and collapse the remaining whitespace.
+fn strip_markup(body: &str) -> String {
+    let mut out = String::with_capacity(body.len());
+    let mut in_tag = false;
+
+    for ch in body.chars() {
+        match ch {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
+            _ if in_tag => continue,
+            ch if ch.is_whitespace() => {
+                if !out.ends_with(' ') {
+                    out.push(' ');
+                }
+            }
+            ch => out.push(ch),
+        }
+    }
+
+    out
 }

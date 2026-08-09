@@ -418,6 +418,23 @@ fn handles_non_json_error_body() {
 }
 
 #[test]
+fn summarizes_an_html_error_body() {
+    // NOTE: Google answers some 404s with a whole page; its title is
+    // the one part worth showing.
+    let html = b"<!DOCTYPE html>\n<html lang=en>\n  <title>Error 404 (Not Found)!!1</title>\n  <p>The requested URL was not found on this server.</p>\n</html>";
+    let (status, message) = parse_api_error(404, html);
+    assert_eq!(status, 404);
+    assert_eq!(message, "Error 404 (Not Found)!!1");
+
+    // NOTE: no title, so the markup is stripped and collapsed.
+    let (_, message) = parse_api_error(500, b"<div>\n  boom  </div>\n<p>twice</p>");
+    assert_eq!(message, "boom twice");
+
+    let (_, message) = parse_api_error(500, b"   \n  ");
+    assert_eq!(message, "unknown People API error");
+}
+
+#[test]
 fn joins_field_masks() {
     assert_eq!(
         to_field_mask(&[PeoplePersonField::Names, PeoplePersonField::EmailAddresses]),
