@@ -26,7 +26,7 @@ use std::io::{self, Read, Write};
     feature = "rustls-ring",
     feature = "native-tls"
 ))]
-use pimalaya_stream::std::stream::StreamStd;
+use pimalaya_stream::stream::{Stream, TcpConnectOptions, TlsConnectOptions};
 #[cfg(any(
     feature = "rustls-aws",
     feature = "rustls-ring",
@@ -158,8 +158,19 @@ impl PeopleClientStd {
             .ok_or_else(|| PeopleClientStdError::UrlMissingHost(url.to_string()))?;
 
         let stream = match url.scheme() {
-            "http" => StreamStd::connect_tcp(host, url.port().unwrap_or(80))?,
-            "https" => StreamStd::connect_tls(host, url.port().unwrap_or(443), &tls)?,
+            "http" => {
+                let port = url.port().unwrap_or(80);
+                Stream::connect_tcp(host, port, TcpConnectOptions::default())?
+            }
+            "https" => {
+                let port = url.port().unwrap_or(443);
+                let opts = TlsConnectOptions {
+                    tls: tls.clone(),
+                    ..Default::default()
+                };
+
+                Stream::connect_tls(host, port, opts)?
+            }
             scheme => {
                 return Err(PeopleClientStdError::UrlUnsupportedScheme(
                     url.to_string(),
