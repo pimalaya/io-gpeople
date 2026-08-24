@@ -11,7 +11,7 @@
 
 use std::env;
 
-use io_people::v1::{client::PeopleClientStd, rest::people::PeoplePersonField};
+use io_gpeople::v1::{client::PeopleClientStd, rest::people::PeoplePersonField};
 
 fn main() {
     env_logger::try_init().ok();

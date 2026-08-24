@@ -1,16 +1,16 @@
 [package]
-name = "io-people"
+name = "io-gpeople"
 description = "Google People REST API client library for Rust"
 version = "0.3.0"
-authors = ["metrovoc", "soywod <pimalaya.org@posteo.net>"]
+authors = ["metrovoc", "Clément DOUIN (soywod) <pimalaya.org@posteo.net>"]
 rust-version = "1.88"
 edition = "2024"
 license = "MIT OR Apache-2.0"
 categories = ["api-bindings", "no-std"]
 keywords = ["io-free", "no-std", "coroutine", "google", "contacts"]
 homepage = "https://pimalaya.org"
-documentation = "https://docs.rs/io-people/latest/io_people"
-repository = "https://github.com/pimalaya/io-people"
+documentation = "https://docs.rs/io-gpeople/latest/io_gpeople"
+repository = "https://github.com/pimalaya/io-gpeople"
 
 [package.metadata.docs.rs]
 all-features = true
@@ -25,8 +25,8 @@ native-tls = ["client", "pimalaya-stream/native-tls", "dep:anyhow", "dep:pimalay
 vendored = ["pimalaya-stream?/vendored"]
 
 [[example]]
-name = "std_people"
-path = "examples/std_people.rs"
+name = "std_gpeople"
+path = "examples/std_gpeople.rs"
 required-features = ["rustls-ring"]
 
 [dev-dependencies]

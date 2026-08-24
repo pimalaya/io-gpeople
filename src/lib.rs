@@ -2,7 +2,7 @@
 #![deny(missing_docs)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
-//! # io-people
+//! # io-gpeople
 //!
 //! I/O-free Google People coroutines built on [io-http]. Every
 //! network exchange is a resumable state machine that emits read and
@@ -74,7 +74,7 @@
 //! flagged `metadata.deleted`). An expired token surfaces as HTTP 410,
 //! which callers handle by re-baselining with a full listing. The etag
 //! gotcha `updateContact` exposes is documented in
-//! [docs/etags.md](https://github.com/pimalaya/io-people/blob/master/docs/etags.md).
+//! [docs/etags.md](https://github.com/pimalaya/io-gpeople/blob/master/docs/etags.md).
 //!
 //! ## The std client
 //!

@@ -8,4 +8,4 @@
 
 ## Reporting a Vulnerability
 
-https://github.com/pimalaya/io-people/issues
+https://github.com/pimalaya/io-gpeople/issues

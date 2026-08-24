@@ -435,22 +435,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "io-http"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4fe2064378f85c13e3f3aca141308fa541c4478ff5cf5ebadd7dcbcce1a44281"
-dependencies = [
- "base64",
- "httparse",
- "log",
- "memchr",
- "secrecy",
- "thiserror",
- "url",
-]
-
-[[package]]
-name = "io-people"
+name = "io-gpeople"
 version = "0.3.0"
 dependencies = [
  "anyhow",
@@ -467,6 +452,21 @@ dependencies = [
  "thiserror",
  "tokio",
  "tokio-rustls",
+ "url",
+]
+
+[[package]]
+name = "io-http"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4fe2064378f85c13e3f3aca141308fa541c4478ff5cf5ebadd7dcbcce1a44281"
+dependencies = [
+ "base64",
+ "httparse",
+ "log",
+ "memchr",
+ "secrecy",
+ "thiserror",
  "url",
 ]
 

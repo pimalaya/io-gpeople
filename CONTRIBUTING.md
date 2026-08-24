@@ -1,6 +1,6 @@
 # Contributing guide
 
-Thank you for investing your time in contributing to I/O People.
+Thank you for investing your time in contributing to I/O Google People.
 
 Whether you are a human or an AI agent, read these in order before touching the code:
 
@@ -13,7 +13,7 @@ Everything below documents only what differs from the Pimalaya standards.
 
 ## Feature matrix
 
-io-people follows the standard layered split (I/O-free coroutines, then the std client behind the `client` feature), plus a vendored switch compiling the TLS dependencies from source:
+io-gpeople follows the standard layered split (I/O-free coroutines, then the std client behind the `client` feature), plus a vendored switch compiling the TLS dependencies from source:
 
 ```sh
 cargo build --no-default-features                        # coroutines only, no std leak

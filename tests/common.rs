@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use io_people::coroutine::*;
+use io_gpeople::coroutine::*;
 
 pub fn run<C: PeopleCoroutine<Yield = PeopleYield>>(
     coroutine: &mut C,

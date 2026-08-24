@@ -23,7 +23,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use io_people::v1::{
+use io_gpeople::v1::{
     client::{PeopleClientStd, PeopleClientStdConnectOptions},
     rest::{
         contact_groups::{PeopleContactGroup, PeopleGroupField},
@@ -56,9 +56,9 @@ fn people() {
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_millis();
-    let group_name = format!("io-people-test-{ts}");
+    let group_name = format!("io-gpeople-test-{ts}");
     let group_name_renamed = format!("{group_name}-renamed");
-    let contact_name = format!("io-people-test-contact-{ts}");
+    let contact_name = format!("io-gpeople-test-contact-{ts}");
     let contact_name_renamed = format!("{contact_name}-renamed");
 
     let name_fields = &[PeoplePersonField::Names, PeoplePersonField::EmailAddresses];
@@ -135,7 +135,7 @@ fn people() {
             ..Default::default()
         }],
         email_addresses: vec![PeopleEmailAddress {
-            value: Some(format!("io-people-test-{ts}@example.com")),
+            value: Some(format!("io-gpeople-test-{ts}@example.com")),
             ..Default::default()
         }],
         ..Default::default()

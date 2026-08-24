@@ -1,7 +1,6 @@
 mod common;
 
-use io_http::rfc6750::bearer::HttpAuthBearer;
-use io_people::v1::{
+use io_gpeople::v1::{
     query::{to_field_mask, to_query_pairs},
     rest::{
         contact_groups::{
@@ -24,6 +23,7 @@ use io_people::v1::{
     },
     send::{PeopleSendError, parse_api_error},
 };
+use io_http::rfc6750::bearer::HttpAuthBearer;
 
 use common::{empty_response, json_response, run};
 
