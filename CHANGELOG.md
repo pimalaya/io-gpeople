@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-09-28
+
+### Changed
+
+- Renamed the crate from io-people to io-gpeople.
+
+  The library path moved from `io_people` to `io_gpeople`, types are unchanged.
+
 ### Fixed
 
 - Fixed `no_std` builds pulling in `std` ([io-gmail#2]).
@@ -17,35 +25,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Bumped io-http to 0.5. The coroutines take and yield its types, so a consumer bumps in step for a single version to resolve.
-- Raised the minimum supported Rust version from 1.87 to 1.88, following pimalaya-stream and io-http.
+- Bumped pimalaya-stream to 0.3. **Behaviour change.**
 
-- Bumped pimalaya-stream to 0.3, whose `Read` and `Write` retry a stream reporting it is not ready. **Behaviour change.**
+  `StreamStd` became `stream::Stream`, with per-transport connect options. The transport now retries a spurious `EAGAIN` for a minute before failing with `TimedOut`, and arms a read deadline at connect time.
 
-  The 0.2 release removed the SASL module this crate never used. 0.3 renames `StreamStd` to `stream::Stream` and moves its connects onto per-transport options structs, which is what this crate now calls. A blocking socket is not supposed to report `EAGAIN`, yet callers saw one surface mid-exchange and end the exchange with a bare `Resource temporarily unavailable (os error 35)`; the transport now retries such a failure for a minute before giving up with a `TimedOut` naming the budget, and arms a socket read deadline at connect time so a server going silent on a healthy connection stops blocking the caller forever.
+- Bumped io-http to 0.5.
+
+  The coroutines take and yield its types, so consumers must bump in step.
+
+- Raised the minimum supported Rust version from 1.87 to 1.88.
 
 ### Fixed
 
-- Fixed an error response that is not a Google JSON envelope rendering as its whole body, so a 404 answered with an HTML page surfaced as the page. `parse_api_error` now summarises such a body: the HTML `title` when it carries one, else the markup stripped, the whitespace collapsed and the length capped at 200 characters.
+- Fixed non-JSON error responses surfacing their whole body.
+
+  `parse_api_error` now keeps the HTML `title`, or else the stripped text capped at 200 characters.
 
 ## [0.2.0] - 2026-07-16
 
 ### Changed
 
-- Moved each resource's data types out of its `types` catch-all submodule into the sibling resource module (people.rs, contact_groups.rs), next to the `pub mod` operation declarations.
+- Moved each resource's types out of its private `types` submodule into the resource module.
 
-  The public paths, for example `people::PeoplePerson` and `contact_groups::PeopleContactGroup`, are unchanged: the types were already re-exported at the resource module, so only the private `types` submodule and its re-export go away.
+  Public paths such as `people::PeoplePerson` are unchanged.
 
-- Documented every public item, including struct fields, enum variants and methods, aligning with the documentation guidelines.
+- Documented every public item.
 
 ## [0.1.0] - 2026-07-16
 
 ### Added
 
-- Added the I/O-free coroutines covering version 1 of the Google People API: the `people` resource (get, batch get, create, update and delete contacts, batch create, update and delete, search contacts, list and search directory people, contact photo upload and delete), its `connections` sub-resource (list, with incremental sync via a sync token), the `contactGroups` resource (list, get, batch get, create, update, delete) and its `members` sub-resource (modify), and the `otherContacts` resource (list, search, copy to the personal contacts group).
-- Added the shared `PeopleSend` request primitive over io-http, the `PeopleCoroutine` contract and the `PeopleClientStd` blocking client (`client` feature), with `connect` opening the TCP and TLS connection behind a TLS feature (`rustls-ring` default, `rustls-aws`, `native-tls`).
+- Added the I/O-free coroutines for the Google People API v1: people, connections, contact groups and other contacts.
+- Added `PeopleClientStd`, a std blocking client behind the `client` feature.
 
-[unreleased]: https://github.com/pimalaya/io-gpeople/compare/v0.3.0..HEAD
+[unreleased]: https://github.com/pimalaya/io-gpeople/compare/v0.3.1..HEAD
+[0.3.1]: https://github.com/pimalaya/io-gpeople/compare/v0.3.0..v0.3.1
 [0.3.0]: https://github.com/pimalaya/io-gpeople/compare/v0.2.0..v0.3.0
 [0.2.0]: https://github.com/pimalaya/io-gpeople/compare/v0.1.0..v0.2.0
 [0.1.0]: https://github.com/pimalaya/io-gpeople/compare/root..v0.1.0
