@@ -3,12 +3,11 @@
 //!
 //! <https://developers.google.com/people/api/rest/v1/otherContacts/copyOtherContactToMyContactsGroup>
 
-use alloc::{format, string::String, vec::Vec};
+use alloc::{format, string::String};
 
 use io_http::rfc6750::bearer::HttpAuthBearer;
 use log::{debug, trace};
 use serde::Serialize;
-use serde_variant::to_variant_name;
 use url::Url;
 
 use crate::{
@@ -23,12 +22,12 @@ use crate::{
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct Request {
+struct Request<'a> {
     copy_mask: String,
     #[serde(skip_serializing_if = "String::is_empty")]
     read_mask: String,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    sources: Vec<&'static str>,
+    #[serde(skip_serializing_if = "<[_]>::is_empty")]
+    sources: &'a [PeopleReadSourceType],
 }
 
 /// People REST "Other contact" copy into the "myContacts" group; only
@@ -76,10 +75,7 @@ impl PeopleOtherContactCopy {
         let request = Request {
             copy_mask: to_field_mask(copy_mask),
             read_mask: to_field_mask(read_mask),
-            sources: sources
-                .iter()
-                .filter_map(|source| to_variant_name(source).ok())
-                .collect(),
+            sources,
         };
 
         let send = PeopleSend::post_json(auth, url, &request)?;

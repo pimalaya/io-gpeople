@@ -49,26 +49,45 @@ use url::Url;
 use crate::v1::send::PEOPLE_API_BASE;
 use crate::{
     coroutine::*,
-    v1::rest::contact_groups::{
-        PeopleContactGroup, PeopleGroupField, create::PeopleContactGroupCreate,
-        delete::PeopleContactGroupDelete, get::PeopleContactGroupGet,
-        list::PeopleContactGroupsList, list::PeopleContactGroupsListParams,
-        list::PeopleContactGroupsListResponse, members::modify::PeopleContactGroupMembersModify,
-        members::modify::PeopleContactGroupMembersModifyResponse, update::PeopleContactGroupUpdate,
+    v1::{
+        rest::{
+            contact_groups::{
+                PeopleContactGroup, PeopleGroupField,
+                create::PeopleContactGroupCreate,
+                delete::PeopleContactGroupDelete,
+                get::PeopleContactGroupGet,
+                list::{
+                    PeopleContactGroupsList, PeopleContactGroupsListParams,
+                    PeopleContactGroupsListResponse,
+                },
+                members::modify::{
+                    PeopleContactGroupMembersModify, PeopleContactGroupMembersModifyResponse,
+                },
+                update::PeopleContactGroupUpdate,
+            },
+            other_contacts::{
+                copy_other_contact_to_my_contacts_group::PeopleOtherContactCopy,
+                list::{
+                    PeopleOtherContactsList, PeopleOtherContactsListParams,
+                    PeopleOtherContactsListResponse,
+                },
+                search::PeopleOtherContactsSearch,
+            },
+            people::{
+                PeoplePerson, PeoplePersonField, PeopleReadSourceType, PeopleSearchResponse,
+                connections::list::{
+                    PeopleConnectionsList, PeopleConnectionsListParams,
+                    PeopleConnectionsListResponse,
+                },
+                create_contact::PeopleContactCreate,
+                delete_contact::PeopleContactDelete,
+                get::PeoplePersonGet,
+                search_contacts::PeopleContactsSearch,
+                update_contact::PeopleContactUpdate,
+            },
+        },
+        send::{PeopleNoResponse, PeopleSendError, PeopleSendOutput},
     },
-    v1::rest::other_contacts::{
-        copy_other_contact_to_my_contacts_group::PeopleOtherContactCopy,
-        list::PeopleOtherContactsList, list::PeopleOtherContactsListParams,
-        list::PeopleOtherContactsListResponse, search::PeopleOtherContactsSearch,
-    },
-    v1::rest::people::{
-        PeoplePerson, PeoplePersonField, PeopleReadSourceType, PeopleSearchResponse,
-        connections::list::PeopleConnectionsList, connections::list::PeopleConnectionsListParams,
-        connections::list::PeopleConnectionsListResponse, create_contact::PeopleContactCreate,
-        delete_contact::PeopleContactDelete, get::PeoplePersonGet,
-        search_contacts::PeopleContactsSearch, update_contact::PeopleContactUpdate,
-    },
-    v1::send::{PeopleNoResponse, PeopleSendError, PeopleSendOutput},
 };
 
 /// Errors produced by [`PeopleClientStd`] operations.

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed `no_std` builds pulling in `std` ([io-gmail#2]).
+
+  The `serde_variant` dependency was dropped, enum query parameters now go through the in-crate query serializer.
+
 ## [0.3.0] - 2026-08-15
 
 ### Changed
@@ -43,3 +49,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [0.3.0]: https://github.com/pimalaya/io-gpeople/compare/v0.2.0..v0.3.0
 [0.2.0]: https://github.com/pimalaya/io-gpeople/compare/v0.1.0..v0.2.0
 [0.1.0]: https://github.com/pimalaya/io-gpeople/compare/root..v0.1.0
+
+[io-gmail#2]: https://github.com/pimalaya/io-gmail/issues/2

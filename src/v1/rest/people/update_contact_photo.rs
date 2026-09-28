@@ -5,13 +5,12 @@
 //!
 //! <https://developers.google.com/people/api/rest/v1/people/updateContactPhoto>
 
-use alloc::{format, string::String, vec::Vec};
+use alloc::{format, string::String};
 
 use base64::{Engine, engine::general_purpose::STANDARD};
 use io_http::rfc6750::bearer::HttpAuthBearer;
 use log::{debug, trace};
 use serde::{Deserialize, Serialize};
-use serde_variant::to_variant_name;
 use url::Url;
 
 use crate::{
@@ -35,12 +34,12 @@ pub struct PeopleContactPhotoUpdateResponse {
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
-struct Request {
+struct Request<'a> {
     photo_bytes: String,
     #[serde(skip_serializing_if = "String::is_empty")]
     person_fields: String,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    sources: Vec<&'static str>,
+    #[serde(skip_serializing_if = "<[_]>::is_empty")]
+    sources: &'a [PeopleReadSourceType],
 }
 
 /// People REST contact photo update, from raw JPEG or PNG bytes.
@@ -82,10 +81,7 @@ impl PeopleContactPhotoUpdate {
         let request = Request {
             photo_bytes: STANDARD.encode(photo),
             person_fields: to_field_mask(person_fields),
-            sources: sources
-                .iter()
-                .filter_map(|source| to_variant_name(source).ok())
-                .collect(),
+            sources,
         };
 
         let send = PeopleSend::patch_json(auth, url, &request)?;

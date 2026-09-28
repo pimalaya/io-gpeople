@@ -4,14 +4,13 @@
 
 use io_http::rfc6750::bearer::HttpAuthBearer;
 use log::{debug, trace};
-use serde_variant::to_variant_name;
 use url::Url;
 
 use crate::{
     coroutine::*,
     people_try,
     v1::{
-        query::to_field_mask,
+        query::{to_field_mask, to_field_pairs},
         rest::people::{PeoplePerson, PeoplePersonField, PeopleReadSourceType},
         send::{PEOPLE_API_BASE, PeopleSend, PeopleSendError, PeopleSendOutput},
     },
@@ -54,9 +53,7 @@ impl PeoplePersonGet {
         {
             let mut pairs = url.query_pairs_mut();
             pairs.append_pair("personFields", &to_field_mask(person_fields));
-            for source in sources {
-                pairs.append_pair("sources", to_variant_name(source).unwrap_or_default());
-            }
+            pairs.extend_pairs(to_field_pairs("sources", sources));
         }
 
         let send = PeopleSend::get(auth, url);

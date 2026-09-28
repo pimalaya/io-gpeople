@@ -7,7 +7,6 @@ use alloc::{string::String, vec::Vec};
 use io_http::rfc6750::bearer::HttpAuthBearer;
 use log::{debug, trace};
 use serde::{Deserialize, Serialize};
-use serde_variant::to_variant_name;
 use url::Url;
 
 use crate::{
@@ -36,8 +35,8 @@ pub struct PeopleContactsBatchCreateResponse {
 struct Request<'a> {
     contacts: Vec<Contact<'a>>,
     read_mask: String,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
-    sources: Vec<&'static str>,
+    #[serde(skip_serializing_if = "<[_]>::is_empty")]
+    sources: &'a [PeopleReadSourceType],
 }
 
 #[derive(Serialize)]
@@ -85,10 +84,7 @@ impl PeopleContactsBatchCreate {
                 .map(|contact_person| Contact { contact_person })
                 .collect(),
             read_mask: to_field_mask(read_mask),
-            sources: sources
-                .iter()
-                .filter_map(|source| to_variant_name(source).ok())
-                .collect(),
+            sources,
         };
 
         let send = PeopleSend::post_json(auth, url, &request)?;

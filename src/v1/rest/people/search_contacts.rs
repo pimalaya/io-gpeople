@@ -10,14 +10,13 @@ use alloc::string::ToString;
 
 use io_http::rfc6750::bearer::HttpAuthBearer;
 use log::{debug, trace};
-use serde_variant::to_variant_name;
 use url::Url;
 
 use crate::{
     coroutine::*,
     people_try,
     v1::{
-        query::to_field_mask,
+        query::{to_field_mask, to_field_pairs},
         rest::people::{PeoplePersonField, PeopleReadSourceType, PeopleSearchResponse},
         send::{PEOPLE_API_BASE, PeopleSend, PeopleSendError, PeopleSendOutput},
     },
@@ -60,9 +59,7 @@ impl PeopleContactsSearch {
             if let Some(page_size) = page_size {
                 pairs.append_pair("pageSize", &page_size.to_string());
             }
-            for source in sources {
-                pairs.append_pair("sources", to_variant_name(source).unwrap_or_default());
-            }
+            pairs.extend_pairs(to_field_pairs("sources", sources));
         }
 
         let send = PeopleSend::get(auth, url);

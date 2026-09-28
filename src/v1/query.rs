@@ -36,12 +36,33 @@ pub fn is_false(value: &bool) -> bool {
 /// Join field-mask enum values into the comma-separated string the
 /// People API expects for `personFields`-style field masks.
 pub fn to_field_mask<T: Serialize>(fields: &[T]) -> String {
-    let names: Vec<&str> = fields
-        .iter()
-        .filter_map(|field| serde_variant::to_variant_name(field).ok())
+    let names: Vec<String> = to_field_pairs("", fields)
+        .into_iter()
+        .map(|(_, name)| name)
         .collect();
 
     names.join(",")
+}
+
+/// Serialize a single field `value` into URL query pairs under `key`.
+///
+/// Same rules as a struct field of [`to_query_pairs`]: `None` produces
+/// nothing, a sequence produces one repeated-key pair per element and a
+/// unit enum variant produces its serde-renamed name.
+pub fn to_field_pairs<T>(key: &'static str, value: &T) -> Vec<(String, String)>
+where
+    T: Serialize + ?Sized,
+{
+    let mut pairs = Vec::new();
+    let field = FieldQuery {
+        key,
+        pairs: &mut pairs,
+    };
+
+    match value.serialize(field) {
+        Ok(()) => pairs,
+        Err(_) => Vec::new(),
+    }
 }
 
 /// Error raised when a value cannot be flattened into query pairs.

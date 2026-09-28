@@ -7,14 +7,13 @@ use alloc::{string::String, vec::Vec};
 use io_http::rfc6750::bearer::HttpAuthBearer;
 use log::{debug, trace};
 use serde::{Deserialize, Serialize};
-use serde_variant::to_variant_name;
 use url::Url;
 
 use crate::{
     coroutine::*,
     people_try,
     v1::{
-        query::to_field_mask,
+        query::{to_field_mask, to_field_pairs},
         rest::people::{PeoplePersonField, PeoplePersonResponse, PeopleReadSourceType},
         send::{PEOPLE_API_BASE, PeopleSend, PeopleSendError, PeopleSendOutput},
     },
@@ -69,9 +68,7 @@ impl PeoplePersonsBatchGet {
             for resource_name in resource_names {
                 pairs.append_pair("resourceNames", resource_name);
             }
-            for source in sources {
-                pairs.append_pair("sources", to_variant_name(source).unwrap_or_default());
-            }
+            pairs.extend_pairs(to_field_pairs("sources", sources));
         }
 
         let send = PeopleSend::get(auth, url);

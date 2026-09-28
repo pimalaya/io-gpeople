@@ -9,14 +9,13 @@ use alloc::{string::String, vec::Vec};
 use io_http::rfc6750::bearer::HttpAuthBearer;
 use log::{debug, trace};
 use serde::{Deserialize, Serialize};
-use serde_variant::to_variant_name;
 use url::Url;
 
 use crate::{
     coroutine::*,
     people_try,
     v1::{
-        query::{to_field_mask, to_query_pairs},
+        query::{to_field_mask, to_field_pairs, to_query_pairs},
         rest::people::{
             PeopleDirectoryMergeSourceType, PeopleDirectorySourceType, PeoplePerson,
             PeoplePersonField,
@@ -94,9 +93,7 @@ impl PeopleDirectoryList {
         {
             let mut pairs = url.query_pairs_mut();
             pairs.append_pair("readMask", &to_field_mask(read_mask));
-            for source in sources {
-                pairs.append_pair("sources", to_variant_name(source).unwrap_or_default());
-            }
+            pairs.extend_pairs(to_field_pairs("sources", sources));
             pairs.extend_pairs(to_query_pairs(params));
         }
 
