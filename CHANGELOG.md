@@ -7,13 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- **BREAKING** Renamed every `People*` type to `Gpeople*`, the `people_try!` macro to `gpeople_try!` and `PEOPLE_API_BASE` to `GPEOPLE_API_BASE`, matching io-gcal and io-gmail. The `rest::people` module keeps the API's resource name.
+## [0.4.0] - 2026-10-01
 
 ### Added
 
 - **BREAKING** Added `GpeopleClientStdConnectOptions::proxy`, routing the connection through a SOCKS5 or HTTP proxy. The default resolves it from the environment, as before.
+
+### Changed
+
+- **BREAKING** Renamed every `People*` type to `Gpeople*`, the `people_try!` macro to `gpeople_try!` and `PEOPLE_API_BASE` to `GPEOPLE_API_BASE`, matching io-gcal and io-gmail. The `rest::people` module keeps the API's resource name.
 
 ### Fixed
 
@@ -70,7 +72,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the I/O-free coroutines for the Google People API v1: people, connections, contact groups and other contacts.
 - Added `PeopleClientStd`, a std blocking client behind the `client` feature.
 
-[unreleased]: https://github.com/pimalaya/io-gpeople/compare/v0.3.1..HEAD
+[unreleased]: https://github.com/pimalaya/io-gpeople/compare/v0.4.0..HEAD
+[0.4.0]: https://github.com/pimalaya/io-gpeople/compare/v0.3.1..v0.4.0
 [0.3.1]: https://github.com/pimalaya/io-gpeople/compare/v0.3.0..v0.3.1
 [0.3.0]: https://github.com/pimalaya/io-gpeople/compare/v0.2.0..v0.3.0
 [0.2.0]: https://github.com/pimalaya/io-gpeople/compare/v0.1.0..v0.2.0
