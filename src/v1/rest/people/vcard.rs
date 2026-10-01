@@ -111,15 +111,18 @@ const MINTED_PROPS: &[&str] = &[
 impl GpeoplePerson {
     /// Projects an io-gpeople person onto a fresh vCard 4.0 document.
     ///
-    /// The person id becomes the UID, typed fields carry their home/work
-    /// TYPE (phones also mobile as cell), and spouse and children relations
-    /// become RELATED names.
+    /// The UID is the one the stash carries ([`stashed_uid`]), else one minted
+    /// from the person id for a person Google created itself. Typed fields
+    /// carry their home/work TYPE (phones also mobile as cell), and spouse and
+    /// children relations become RELATED names.
+    ///
+    /// [`stashed_uid`]: Self::stashed_uid
     pub fn to_vcard(&self) -> String {
         let person = self;
         let mut card = VcardCst::v4();
 
         let id = person.id();
-        if !id.is_empty() {
+        if person.stashed_uid().is_none() && !id.is_empty() {
             card.push(VcardProp::text(VcardPropKind::Uid, vec![], id));
         }
 
@@ -304,7 +307,9 @@ impl GpeoplePerson {
     ///
     /// Every managed field carries the vCard's values, empty when the vCard
     /// drops the property, which clears the masked field on update. Lines
-    /// that do not project are stashed in clientData and restore on read.
+    /// that do not project are stashed in clientData and restore on read,
+    /// the UID among them, People having no UID field: that is what keeps a
+    /// person's identity across a sync with another source.
     pub fn from_vcard(vcard: &str) -> Result<Self, GpeoplePersonVcardError> {
         let card = VcardCst::parse(vcard).map_err(GpeoplePersonVcardError::Parse)?;
         let version = card.version();
@@ -328,9 +333,6 @@ impl GpeoplePerson {
                             .iter()
                             .any(|prop| raw_name.eq_ignore_ascii_case(prop))
                 }
-                // NOTE: the UID is managed: the resource name addresses
-                // the person through the request path.
-                Ok(VcardPropKind::Uid) => true,
                 Ok(VcardPropKind::Fn) => {
                     let value = FN::decode(line, version);
                     set_first(&mut name.unstructured_name, &value.0)
@@ -897,6 +899,26 @@ fn typed_line(name: &'static str, r#type: &Option<String>, value: &str) -> Vcard
     VcardProp::text(name, params, value.to_string())
 }
 
+impl GpeoplePerson {
+    /// The vCard UID the stash carries, `None` for a person no vCard was
+    /// ever written to, People having no UID field of its own.
+    ///
+    /// A sync engine checks it after a write: a server that dropped the
+    /// stash would hand the person back with an identity minted from its
+    /// resource name rather than the UID it was written under.
+    pub fn stashed_uid(&self) -> Option<String> {
+        stash_lines(self).iter().find_map(|line| {
+            let mut bytes = line.clone();
+            bytes.push_str("\r\n");
+            let (line, _) = VcardLine::take(bytes.as_bytes()).ok()?;
+            line.bare_name()
+                .eq_ignore_ascii_case("UID")
+                .then(|| line.raw_value_str().trim().to_string())
+                .filter(|uid| !uid.is_empty())
+        })
+    }
+}
+
 /// The stashed vCard lines behind the cardamum clientData entry.
 fn stash_lines(person: &GpeoplePerson) -> Vec<String> {
     person
@@ -1251,5 +1273,32 @@ mod tests {
 
         let person = GpeoplePerson::from_vcard(&vcard).unwrap();
         assert_eq!(person.client_data[0].value.as_deref(), Some("X-FOO:bar"));
+    }
+
+    #[test]
+    fn a_vcard_uid_rides_the_stash_and_wins_over_the_person_id() {
+        let vcard = "BEGIN:VCARD\r\nVERSION:4.0\r\nUID:urn:uuid:4fbe8971\r\n\
+            FN:Jane Doe\r\nEND:VCARD\r\n";
+
+        let mut person = GpeoplePerson::from_vcard(vcard).unwrap();
+        // NOTE: what People hands back after the create: its own resource
+        // name, and the stash it was given.
+        person.resource_name = "people/c123".into();
+
+        assert_eq!(person.stashed_uid().as_deref(), Some("urn:uuid:4fbe8971"));
+        let vcard = person.to_vcard();
+        assert!(vcard.contains("UID:urn:uuid:4fbe8971\r\n"));
+        assert!(!vcard.contains("UID:c123"));
+    }
+
+    #[test]
+    fn a_person_google_created_mints_its_uid_from_the_person_id() {
+        let person = GpeoplePerson {
+            resource_name: "people/c123".into(),
+            ..Default::default()
+        };
+
+        assert_eq!(person.stashed_uid(), None);
+        assert!(person.to_vcard().contains("UID:c123\r\n"));
     }
 }

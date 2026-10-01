@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added `GpeoplePerson::stashed_uid`, the vCard UID a person's stash carries, for a sync engine to check that a write kept it.
+
+### Changed
+
+- The vCard UID rides the stash, so a person keeps the UID it was written with. **Behaviour change.**
+
+  It used to be dropped on write and minted from the person id on read, which gave one person two identities across a sync. A person with no stashed UID, created by Google itself or by an earlier version, still reads back with one minted from its person id.
+
 ## [0.4.1] - 2026-10-01
 
 ### Added
