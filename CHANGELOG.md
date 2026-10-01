@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-01
+
 ### Added
 
 - Added the `vcard` feature: `GpeoplePerson::to_vcard` and `from_vcard` project a person onto a vCard 4.0 document and back, and `changed_fields` and `unremovable_properties` shape an update against the base person.
@@ -80,7 +82,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the I/O-free coroutines for the Google People API v1: people, connections, contact groups and other contacts.
 - Added `PeopleClientStd`, a std blocking client behind the `client` feature.
 
-[unreleased]: https://github.com/pimalaya/io-gpeople/compare/v0.4.0..HEAD
+[unreleased]: https://github.com/pimalaya/io-gpeople/compare/v0.4.1..HEAD
+[0.4.1]: https://github.com/pimalaya/io-gpeople/compare/v0.4.0..v0.4.1
 [0.4.0]: https://github.com/pimalaya/io-gpeople/compare/v0.3.1..v0.4.0
 [0.3.1]: https://github.com/pimalaya/io-gpeople/compare/v0.3.0..v0.3.1
 [0.3.0]: https://github.com/pimalaya/io-gpeople/compare/v0.2.0..v0.3.0
