@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-10-01
+
 ### Added
 
 - Added `GpeoplePerson::stashed_uid`, the vCard UID a person's stash carries, for a sync engine to check that a write kept it.
@@ -92,7 +94,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the I/O-free coroutines for the Google People API v1: people, connections, contact groups and other contacts.
 - Added `PeopleClientStd`, a std blocking client behind the `client` feature.
 
-[unreleased]: https://github.com/pimalaya/io-gpeople/compare/v0.4.1..HEAD
+[unreleased]: https://github.com/pimalaya/io-gpeople/compare/v0.4.2..HEAD
+[0.4.2]: https://github.com/pimalaya/io-gpeople/compare/v0.4.1..v0.4.2
 [0.4.1]: https://github.com/pimalaya/io-gpeople/compare/v0.4.0..v0.4.1
 [0.4.0]: https://github.com/pimalaya/io-gpeople/compare/v0.3.1..v0.4.0
 [0.3.1]: https://github.com/pimalaya/io-gpeople/compare/v0.3.0..v0.3.1
