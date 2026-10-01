@@ -2,7 +2,7 @@
 
 use io_gpeople::coroutine::*;
 
-pub fn run<C: PeopleCoroutine<Yield = PeopleYield>>(
+pub fn run<C: GpeopleCoroutine<Yield = GpeopleYield>>(
     coroutine: &mut C,
     response: &[u8],
 ) -> (C::Return, Vec<u8>) {
@@ -12,11 +12,11 @@ pub fn run<C: PeopleCoroutine<Yield = PeopleYield>>(
 
     loop {
         match coroutine.resume(arg.take()) {
-            PeopleCoroutineState::Complete(ret) => return (ret, written),
-            PeopleCoroutineState::Yielded(PeopleYield::WantsWrite(bytes)) => {
+            GpeopleCoroutineState::Complete(ret) => return (ret, written),
+            GpeopleCoroutineState::Yielded(GpeopleYield::WantsWrite(bytes)) => {
                 written.extend_from_slice(&bytes);
             }
-            PeopleCoroutineState::Yielded(PeopleYield::WantsRead) => {
+            GpeopleCoroutineState::Yielded(GpeopleYield::WantsRead) => {
                 if fed {
                     arg = Some(&[]);
                 } else {

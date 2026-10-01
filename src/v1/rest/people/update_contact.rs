@@ -17,20 +17,20 @@ use url::Url;
 
 use crate::{
     coroutine::*,
-    people_try,
+    gpeople_try,
     v1::{
         query::{to_field_mask, to_field_pairs},
-        rest::people::{PeoplePerson, PeoplePersonField, PeopleReadSourceType},
-        send::{PEOPLE_API_BASE, PeopleSend, PeopleSendError, PeopleSendOutput},
+        rest::people::{GpeoplePerson, GpeoplePersonField, GpeopleReadSourceType},
+        send::{GPEOPLE_API_BASE, GpeopleSend, GpeopleSendError, GpeopleSendOutput},
     },
 };
 
 /// People REST contact update, replacing the masked fields.
-pub struct PeopleContactUpdate {
-    send: PeopleSend<PeoplePerson>,
+pub struct GpeopleContactUpdate {
+    send: GpeopleSend<GpeoplePerson>,
 }
 
-impl PeopleContactUpdate {
+impl GpeopleContactUpdate {
     /// Build a new contact update coroutine.
     ///
     /// `person` must carry a non-empty `resource_name` and a valid etag from
@@ -39,11 +39,11 @@ impl PeopleContactUpdate {
     /// response.
     pub fn new(
         auth: &HttpAuthBearer,
-        person: &PeoplePerson,
-        update_person_fields: &[PeoplePersonField],
-        person_fields: &[PeoplePersonField],
-        sources: &[PeopleReadSourceType],
-    ) -> Result<Self, PeopleSendError> {
+        person: &GpeoplePerson,
+        update_person_fields: &[GpeoplePersonField],
+        person_fields: &[GpeoplePersonField],
+        sources: &[GpeopleReadSourceType],
+    ) -> Result<Self, GpeopleSendError> {
         debug!("prepare people contact for update");
         trace!("person: {person:?}");
         trace!("update_person_fields: {update_person_fields:?}");
@@ -52,17 +52,17 @@ impl PeopleContactUpdate {
 
         if person.resource_name.trim().is_empty() {
             let err =
-                PeopleSendError::InvalidRequest("Person resource name cannot be empty".into());
+                GpeopleSendError::InvalidRequest("Person resource name cannot be empty".into());
             return Err(err);
         }
 
         if update_person_fields.is_empty() {
             let err =
-                PeopleSendError::InvalidRequest("Update person fields cannot be empty".into());
+                GpeopleSendError::InvalidRequest("Update person fields cannot be empty".into());
             return Err(err);
         }
 
-        let mut url = Url::parse(PEOPLE_API_BASE)?
+        let mut url = Url::parse(GPEOPLE_API_BASE)?
             .join(&format!("{}:updateContact", person.resource_name))?;
 
         {
@@ -74,20 +74,20 @@ impl PeopleContactUpdate {
             pairs.extend_pairs(to_field_pairs("sources", sources));
         }
 
-        let send = PeopleSend::patch_json(auth, url, person)?;
+        let send = GpeopleSend::patch_json(auth, url, person)?;
 
         Ok(Self { send })
     }
 }
 
-impl PeopleCoroutine for PeopleContactUpdate {
-    type Yield = PeopleYield;
-    type Return = Result<PeopleSendOutput<PeoplePerson>, PeopleSendError>;
+impl GpeopleCoroutine for GpeopleContactUpdate {
+    type Yield = GpeopleYield;
+    type Return = Result<GpeopleSendOutput<GpeoplePerson>, GpeopleSendError>;
 
-    fn resume(&mut self, arg: Option<&[u8]>) -> PeopleCoroutineState<Self::Yield, Self::Return> {
-        let out = people_try!(&mut self.send, arg);
+    fn resume(&mut self, arg: Option<&[u8]>) -> GpeopleCoroutineState<Self::Yield, Self::Return> {
+        let out = gpeople_try!(&mut self.send, arg);
         debug!("people contact updated");
         trace!("out: {out:?}");
-        PeopleCoroutineState::Complete(Ok(out))
+        GpeopleCoroutineState::Complete(Ok(out))
     }
 }

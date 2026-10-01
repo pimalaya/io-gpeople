@@ -8,20 +8,20 @@ use url::Url;
 
 use crate::{
     coroutine::*,
-    people_try,
+    gpeople_try,
     v1::{
         query::{to_field_mask, to_field_pairs},
-        rest::people::{PeoplePerson, PeoplePersonField, PeopleReadSourceType},
-        send::{PEOPLE_API_BASE, PeopleSend, PeopleSendError, PeopleSendOutput},
+        rest::people::{GpeoplePerson, GpeoplePersonField, GpeopleReadSourceType},
+        send::{GPEOPLE_API_BASE, GpeopleSend, GpeopleSendError, GpeopleSendOutput},
     },
 };
 
 /// People REST person retrieval, by full resource name.
-pub struct PeoplePersonGet {
-    send: PeopleSend<PeoplePerson>,
+pub struct GpeoplePersonGet {
+    send: GpeopleSend<GpeoplePerson>,
 }
 
-impl PeoplePersonGet {
+impl GpeoplePersonGet {
     /// Build a new person retrieval coroutine.
     ///
     /// `resource_name` (e.g. `people/me`) and `person_fields` must both be
@@ -29,9 +29,9 @@ impl PeoplePersonGet {
     pub fn new(
         auth: &HttpAuthBearer,
         resource_name: &str,
-        person_fields: &[PeoplePersonField],
-        sources: &[PeopleReadSourceType],
-    ) -> Result<Self, PeopleSendError> {
+        person_fields: &[GpeoplePersonField],
+        sources: &[GpeopleReadSourceType],
+    ) -> Result<Self, GpeopleSendError> {
         debug!("prepare people person retrieval");
         trace!("resource_name: {resource_name:?}");
         trace!("person_fields: {person_fields:?}");
@@ -39,16 +39,16 @@ impl PeoplePersonGet {
 
         if resource_name.trim().is_empty() {
             let err =
-                PeopleSendError::InvalidRequest("Person resource name cannot be empty".into());
+                GpeopleSendError::InvalidRequest("Person resource name cannot be empty".into());
             return Err(err);
         }
 
         if person_fields.is_empty() {
-            let err = PeopleSendError::InvalidRequest("Person fields cannot be empty".into());
+            let err = GpeopleSendError::InvalidRequest("Person fields cannot be empty".into());
             return Err(err);
         }
 
-        let mut url = Url::parse(PEOPLE_API_BASE)?.join(resource_name)?;
+        let mut url = Url::parse(GPEOPLE_API_BASE)?.join(resource_name)?;
 
         {
             let mut pairs = url.query_pairs_mut();
@@ -56,20 +56,20 @@ impl PeoplePersonGet {
             pairs.extend_pairs(to_field_pairs("sources", sources));
         }
 
-        let send = PeopleSend::get(auth, url);
+        let send = GpeopleSend::get(auth, url);
 
         Ok(Self { send })
     }
 }
 
-impl PeopleCoroutine for PeoplePersonGet {
-    type Yield = PeopleYield;
-    type Return = Result<PeopleSendOutput<PeoplePerson>, PeopleSendError>;
+impl GpeopleCoroutine for GpeoplePersonGet {
+    type Yield = GpeopleYield;
+    type Return = Result<GpeopleSendOutput<GpeoplePerson>, GpeopleSendError>;
 
-    fn resume(&mut self, arg: Option<&[u8]>) -> PeopleCoroutineState<Self::Yield, Self::Return> {
-        let out = people_try!(&mut self.send, arg);
+    fn resume(&mut self, arg: Option<&[u8]>) -> GpeopleCoroutineState<Self::Yield, Self::Return> {
+        let out = gpeople_try!(&mut self.send, arg);
         debug!("people person retrieved");
         trace!("out: {out:?}");
-        PeopleCoroutineState::Complete(Ok(out))
+        GpeopleCoroutineState::Complete(Ok(out))
     }
 }

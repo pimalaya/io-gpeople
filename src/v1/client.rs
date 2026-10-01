@@ -10,13 +10,10 @@
 use core::time::Duration;
 use core::{any::Any, fmt};
 
-#[cfg(any(
-    feature = "rustls-aws",
-    feature = "rustls-ring",
-    feature = "native-tls"
-))]
-use alloc::string::ToString;
-use alloc::{boxed::Box, string::String};
+use alloc::{
+    boxed::Box,
+    string::{String, ToString},
+};
 use io_http::rfc6750::bearer::HttpAuthBearer;
 
 use std::io::{self, Read, Write};
@@ -26,13 +23,16 @@ use std::io::{self, Read, Write};
     feature = "rustls-ring",
     feature = "native-tls"
 ))]
-use pimalaya_stream::stream::{Stream, TcpConnectOptions, TlsConnectOptions};
+pub use pimalaya_stream::tls::*;
 #[cfg(any(
     feature = "rustls-aws",
     feature = "rustls-ring",
     feature = "native-tls"
 ))]
-pub use pimalaya_stream::tls::*;
+use pimalaya_stream::{
+    proxy::Proxy,
+    stream::{Stream, TcpConnectOptions, TlsConnectOptions},
+};
 use thiserror::Error;
 #[cfg(any(
     feature = "rustls-aws",
@@ -46,56 +46,56 @@ use url::Url;
     feature = "rustls-ring",
     feature = "native-tls"
 ))]
-use crate::v1::send::PEOPLE_API_BASE;
+use crate::v1::send::GPEOPLE_API_BASE;
 use crate::{
     coroutine::*,
     v1::{
         rest::{
             contact_groups::{
-                PeopleContactGroup, PeopleGroupField,
-                create::PeopleContactGroupCreate,
-                delete::PeopleContactGroupDelete,
-                get::PeopleContactGroupGet,
+                GpeopleContactGroup, GpeopleGroupField,
+                create::GpeopleContactGroupCreate,
+                delete::GpeopleContactGroupDelete,
+                get::GpeopleContactGroupGet,
                 list::{
-                    PeopleContactGroupsList, PeopleContactGroupsListParams,
-                    PeopleContactGroupsListResponse,
+                    GpeopleContactGroupsList, GpeopleContactGroupsListParams,
+                    GpeopleContactGroupsListResponse,
                 },
                 members::modify::{
-                    PeopleContactGroupMembersModify, PeopleContactGroupMembersModifyResponse,
+                    GpeopleContactGroupMembersModify, GpeopleContactGroupMembersModifyResponse,
                 },
-                update::PeopleContactGroupUpdate,
+                update::GpeopleContactGroupUpdate,
             },
             other_contacts::{
-                copy_other_contact_to_my_contacts_group::PeopleOtherContactCopy,
+                copy_other_contact_to_my_contacts_group::GpeopleOtherContactCopy,
                 list::{
-                    PeopleOtherContactsList, PeopleOtherContactsListParams,
-                    PeopleOtherContactsListResponse,
+                    GpeopleOtherContactsList, GpeopleOtherContactsListParams,
+                    GpeopleOtherContactsListResponse,
                 },
-                search::PeopleOtherContactsSearch,
+                search::GpeopleOtherContactsSearch,
             },
             people::{
-                PeoplePerson, PeoplePersonField, PeopleReadSourceType, PeopleSearchResponse,
+                GpeoplePerson, GpeoplePersonField, GpeopleReadSourceType, GpeopleSearchResponse,
                 connections::list::{
-                    PeopleConnectionsList, PeopleConnectionsListParams,
-                    PeopleConnectionsListResponse,
+                    GpeopleConnectionsList, GpeopleConnectionsListParams,
+                    GpeopleConnectionsListResponse,
                 },
-                create_contact::PeopleContactCreate,
-                delete_contact::PeopleContactDelete,
-                get::PeoplePersonGet,
-                search_contacts::PeopleContactsSearch,
-                update_contact::PeopleContactUpdate,
+                create_contact::GpeopleContactCreate,
+                delete_contact::GpeopleContactDelete,
+                get::GpeoplePersonGet,
+                search_contacts::GpeopleContactsSearch,
+                update_contact::GpeopleContactUpdate,
             },
         },
-        send::{PeopleNoResponse, PeopleSendError, PeopleSendOutput},
+        send::{GpeopleNoResponse, GpeopleSendError, GpeopleSendOutput},
     },
 };
 
-/// Errors produced by [`PeopleClientStd`] operations.
+/// Errors produced by [`GpeopleClientStd`] operations.
 #[derive(Debug, Error)]
-pub enum PeopleClientStdError {
+pub enum GpeopleClientStdError {
     /// A People API send coroutine returned an error.
     #[error(transparent)]
-    Send(#[from] PeopleSendError),
+    Send(#[from] GpeopleSendError),
 
     /// An I/O error occurred while reading from or writing to the stream.
     #[error(transparent)]
@@ -127,10 +127,11 @@ pub enum PeopleClientStdError {
     UrlUnsupportedScheme(String, String),
 }
 
-/// Optional settings for [`PeopleClientStd::connect`]; every field has a
-/// default (the TLS backend default).
+/// Optional settings for [`GpeopleClientStd::connect`]; every field has a
+/// default (the TLS backend default, and the proxy resolved from the
+/// environment).
 #[derive(Default)]
-pub struct PeopleClientStdConnectOptions {
+pub struct GpeopleClientStdConnectOptions {
     #[cfg(any(
         feature = "rustls-aws",
         feature = "rustls-ring",
@@ -138,19 +139,27 @@ pub struct PeopleClientStdConnectOptions {
     ))]
     /// TLS connector configuration passed to the underlying stream.
     pub tls: Tls,
+    #[cfg(any(
+        feature = "rustls-aws",
+        feature = "rustls-ring",
+        feature = "native-tls"
+    ))]
+    /// How the connection reaches the API: [`Proxy::System`] resolves it
+    /// from the environment, [`Proxy::None`] connects directly.
+    pub proxy: Proxy,
 }
 
 const READ_BUFFER_SIZE: usize = 16 * 1024;
 
 /// Std-blocking People API client holding a stream and a bearer credential.
-pub struct PeopleClientStd {
+pub struct GpeopleClientStd {
     /// The underlying read/write stream used for all HTTP communication.
-    pub stream: Box<dyn PeopleStream>,
+    pub stream: Box<dyn GpeopleStream>,
     /// The bearer-token credential attached to every outgoing request.
     pub auth: HttpAuthBearer,
 }
 
-impl PeopleClientStd {
+impl GpeopleClientStd {
     /// Construct a client from an existing stream and a bearer token.
     pub fn new<S: Read + Write + Send + 'static>(stream: S, token: impl ToString) -> Self {
         Self {
@@ -167,31 +176,37 @@ impl PeopleClientStd {
     /// Open a TLS connection to `people.googleapis.com` and return a client.
     pub fn connect(
         token: impl ToString,
-        options: PeopleClientStdConnectOptions,
-    ) -> Result<Self, PeopleClientStdError> {
-        let PeopleClientStdConnectOptions { tls } = options;
+        options: GpeopleClientStdConnectOptions,
+    ) -> Result<Self, GpeopleClientStdError> {
+        let GpeopleClientStdConnectOptions { tls, proxy } = options;
 
-        let url = Url::parse(PEOPLE_API_BASE).expect("People API base URL is valid");
+        let url = Url::parse(GPEOPLE_API_BASE).expect("People API base URL is valid");
         let host = url
             .host_str()
-            .ok_or_else(|| PeopleClientStdError::UrlMissingHost(url.to_string()))?;
+            .ok_or_else(|| GpeopleClientStdError::UrlMissingHost(url.to_string()))?;
 
         let stream = match url.scheme() {
             "http" => {
                 let port = url.port().unwrap_or(80);
-                Stream::connect_tcp(host, port, TcpConnectOptions::default())?
+                let opts = TcpConnectOptions {
+                    proxy,
+                    ..Default::default()
+                };
+
+                Stream::connect_tcp(host, port, opts)?
             }
             "https" => {
                 let port = url.port().unwrap_or(443);
                 let opts = TlsConnectOptions {
-                    tls: tls.clone(),
+                    tls,
+                    proxy,
                     ..Default::default()
                 };
 
                 Stream::connect_tls(host, port, opts)?
             }
             scheme => {
-                return Err(PeopleClientStdError::UrlUnsupportedScheme(
+                return Err(GpeopleClientStdError::UrlUnsupportedScheme(
                     url.to_string(),
                     scheme.to_string(),
                 ));
@@ -216,11 +231,11 @@ impl PeopleClientStd {
     pub fn run<C, T>(
         &mut self,
         mut coroutine: C,
-    ) -> Result<PeopleSendOutput<T>, PeopleClientStdError>
+    ) -> Result<GpeopleSendOutput<T>, GpeopleClientStdError>
     where
-        C: PeopleCoroutine<
-                Yield = PeopleYield,
-                Return = Result<PeopleSendOutput<T>, PeopleSendError>,
+        C: GpeopleCoroutine<
+                Yield = GpeopleYield,
+                Return = Result<GpeopleSendOutput<T>, GpeopleSendError>,
             >,
     {
         let mut buf = [0u8; READ_BUFFER_SIZE];
@@ -228,13 +243,13 @@ impl PeopleClientStd {
 
         loop {
             match coroutine.resume(arg.take()) {
-                PeopleCoroutineState::Complete(Ok(out)) => return Ok(out),
-                PeopleCoroutineState::Complete(Err(err)) => return Err(err.into()),
-                PeopleCoroutineState::Yielded(PeopleYield::WantsRead) => {
+                GpeopleCoroutineState::Complete(Ok(out)) => return Ok(out),
+                GpeopleCoroutineState::Complete(Err(err)) => return Err(err.into()),
+                GpeopleCoroutineState::Yielded(GpeopleYield::WantsRead) => {
                     let n = self.stream.read(&mut buf)?;
                     arg = Some(&buf[..n]);
                 }
-                PeopleCoroutineState::Yielded(PeopleYield::WantsWrite(bytes)) => {
+                GpeopleCoroutineState::Yielded(GpeopleYield::WantsWrite(bytes)) => {
                     self.stream.write_all(&bytes)?;
                     arg = None;
                 }
@@ -245,10 +260,10 @@ impl PeopleClientStd {
     /// List the authenticated user's contacts (people.connections.list).
     pub fn connections_list(
         &mut self,
-        person_fields: &[PeoplePersonField],
-        params: &PeopleConnectionsListParams,
-    ) -> Result<PeopleSendOutput<PeopleConnectionsListResponse>, PeopleClientStdError> {
-        let coroutine = PeopleConnectionsList::new(&self.auth, person_fields, params)?;
+        person_fields: &[GpeoplePersonField],
+        params: &GpeopleConnectionsListParams,
+    ) -> Result<GpeopleSendOutput<GpeopleConnectionsListResponse>, GpeopleClientStdError> {
+        let coroutine = GpeopleConnectionsList::new(&self.auth, person_fields, params)?;
         self.run(coroutine)
     }
 
@@ -256,21 +271,21 @@ impl PeopleClientStd {
     pub fn person_get(
         &mut self,
         resource_name: &str,
-        person_fields: &[PeoplePersonField],
-        sources: &[PeopleReadSourceType],
-    ) -> Result<PeopleSendOutput<PeoplePerson>, PeopleClientStdError> {
-        let coroutine = PeoplePersonGet::new(&self.auth, resource_name, person_fields, sources)?;
+        person_fields: &[GpeoplePersonField],
+        sources: &[GpeopleReadSourceType],
+    ) -> Result<GpeopleSendOutput<GpeoplePerson>, GpeopleClientStdError> {
+        let coroutine = GpeoplePersonGet::new(&self.auth, resource_name, person_fields, sources)?;
         self.run(coroutine)
     }
 
     /// Create a new contact and return the created person (people.createContact).
     pub fn contact_create(
         &mut self,
-        person: &PeoplePerson,
-        person_fields: &[PeoplePersonField],
-        sources: &[PeopleReadSourceType],
-    ) -> Result<PeopleSendOutput<PeoplePerson>, PeopleClientStdError> {
-        let coroutine = PeopleContactCreate::new(&self.auth, person, person_fields, sources)?;
+        person: &GpeoplePerson,
+        person_fields: &[GpeoplePersonField],
+        sources: &[GpeopleReadSourceType],
+    ) -> Result<GpeopleSendOutput<GpeoplePerson>, GpeopleClientStdError> {
+        let coroutine = GpeopleContactCreate::new(&self.auth, person, person_fields, sources)?;
         self.run(coroutine)
     }
 
@@ -278,12 +293,12 @@ impl PeopleClientStd {
     /// (people.updateContact).
     pub fn contact_update(
         &mut self,
-        person: &PeoplePerson,
-        update_person_fields: &[PeoplePersonField],
-        person_fields: &[PeoplePersonField],
-        sources: &[PeopleReadSourceType],
-    ) -> Result<PeopleSendOutput<PeoplePerson>, PeopleClientStdError> {
-        let coroutine = PeopleContactUpdate::new(
+        person: &GpeoplePerson,
+        update_person_fields: &[GpeoplePersonField],
+        person_fields: &[GpeoplePersonField],
+        sources: &[GpeopleReadSourceType],
+    ) -> Result<GpeopleSendOutput<GpeoplePerson>, GpeopleClientStdError> {
+        let coroutine = GpeopleContactUpdate::new(
             &self.auth,
             person,
             update_person_fields,
@@ -297,8 +312,8 @@ impl PeopleClientStd {
     pub fn contact_delete(
         &mut self,
         resource_name: &str,
-    ) -> Result<PeopleSendOutput<PeopleNoResponse>, PeopleClientStdError> {
-        let coroutine = PeopleContactDelete::new(&self.auth, resource_name)?;
+    ) -> Result<GpeopleSendOutput<GpeopleNoResponse>, GpeopleClientStdError> {
+        let coroutine = GpeopleContactDelete::new(&self.auth, resource_name)?;
         self.run(coroutine)
     }
 
@@ -307,12 +322,12 @@ impl PeopleClientStd {
     pub fn contacts_search(
         &mut self,
         query: &str,
-        read_mask: &[PeoplePersonField],
+        read_mask: &[GpeoplePersonField],
         page_size: Option<u32>,
-        sources: &[PeopleReadSourceType],
-    ) -> Result<PeopleSendOutput<PeopleSearchResponse>, PeopleClientStdError> {
+        sources: &[GpeopleReadSourceType],
+    ) -> Result<GpeopleSendOutput<GpeopleSearchResponse>, GpeopleClientStdError> {
         let coroutine =
-            PeopleContactsSearch::new(&self.auth, query, read_mask, page_size, sources)?;
+            GpeopleContactsSearch::new(&self.auth, query, read_mask, page_size, sources)?;
         self.run(coroutine)
     }
 
@@ -320,10 +335,10 @@ impl PeopleClientStd {
     /// (contactGroups.list).
     pub fn contact_groups_list(
         &mut self,
-        group_fields: &[PeopleGroupField],
-        params: &PeopleContactGroupsListParams,
-    ) -> Result<PeopleSendOutput<PeopleContactGroupsListResponse>, PeopleClientStdError> {
-        let coroutine = PeopleContactGroupsList::new(&self.auth, group_fields, params)?;
+        group_fields: &[GpeopleGroupField],
+        params: &GpeopleContactGroupsListParams,
+    ) -> Result<GpeopleSendOutput<GpeopleContactGroupsListResponse>, GpeopleClientStdError> {
+        let coroutine = GpeopleContactGroupsList::new(&self.auth, group_fields, params)?;
         self.run(coroutine)
     }
 
@@ -332,20 +347,20 @@ impl PeopleClientStd {
         &mut self,
         resource_name: &str,
         max_members: Option<u32>,
-        group_fields: &[PeopleGroupField],
-    ) -> Result<PeopleSendOutput<PeopleContactGroup>, PeopleClientStdError> {
+        group_fields: &[GpeopleGroupField],
+    ) -> Result<GpeopleSendOutput<GpeopleContactGroup>, GpeopleClientStdError> {
         let coroutine =
-            PeopleContactGroupGet::new(&self.auth, resource_name, max_members, group_fields)?;
+            GpeopleContactGroupGet::new(&self.auth, resource_name, max_members, group_fields)?;
         self.run(coroutine)
     }
 
     /// Create a new contact group and return it (contactGroups.create).
     pub fn contact_group_create(
         &mut self,
-        group: &PeopleContactGroup,
-        read_group_fields: &[PeopleGroupField],
-    ) -> Result<PeopleSendOutput<PeopleContactGroup>, PeopleClientStdError> {
-        let coroutine = PeopleContactGroupCreate::new(&self.auth, group, read_group_fields)?;
+        group: &GpeopleContactGroup,
+        read_group_fields: &[GpeopleGroupField],
+    ) -> Result<GpeopleSendOutput<GpeopleContactGroup>, GpeopleClientStdError> {
+        let coroutine = GpeopleContactGroupCreate::new(&self.auth, group, read_group_fields)?;
         self.run(coroutine)
     }
 
@@ -353,11 +368,11 @@ impl PeopleClientStd {
     /// (contactGroups.update).
     pub fn contact_group_update(
         &mut self,
-        group: &PeopleContactGroup,
-        update_group_fields: &[PeopleGroupField],
-        read_group_fields: &[PeopleGroupField],
-    ) -> Result<PeopleSendOutput<PeopleContactGroup>, PeopleClientStdError> {
-        let coroutine = PeopleContactGroupUpdate::new(
+        group: &GpeopleContactGroup,
+        update_group_fields: &[GpeopleGroupField],
+        read_group_fields: &[GpeopleGroupField],
+    ) -> Result<GpeopleSendOutput<GpeopleContactGroup>, GpeopleClientStdError> {
+        let coroutine = GpeopleContactGroupUpdate::new(
             &self.auth,
             group,
             update_group_fields,
@@ -372,8 +387,8 @@ impl PeopleClientStd {
         &mut self,
         resource_name: &str,
         delete_contacts: bool,
-    ) -> Result<PeopleSendOutput<PeopleNoResponse>, PeopleClientStdError> {
-        let coroutine = PeopleContactGroupDelete::new(&self.auth, resource_name, delete_contacts)?;
+    ) -> Result<GpeopleSendOutput<GpeopleNoResponse>, GpeopleClientStdError> {
+        let coroutine = GpeopleContactGroupDelete::new(&self.auth, resource_name, delete_contacts)?;
         self.run(coroutine)
     }
 
@@ -384,9 +399,9 @@ impl PeopleClientStd {
         resource_name: &str,
         resource_names_to_add: &[String],
         resource_names_to_remove: &[String],
-    ) -> Result<PeopleSendOutput<PeopleContactGroupMembersModifyResponse>, PeopleClientStdError>
+    ) -> Result<GpeopleSendOutput<GpeopleContactGroupMembersModifyResponse>, GpeopleClientStdError>
     {
-        let coroutine = PeopleContactGroupMembersModify::new(
+        let coroutine = GpeopleContactGroupMembersModify::new(
             &self.auth,
             resource_name,
             resource_names_to_add,
@@ -398,10 +413,10 @@ impl PeopleClientStd {
     /// List the authenticated user's "other contacts" (otherContacts.list).
     pub fn other_contacts_list(
         &mut self,
-        read_mask: &[PeoplePersonField],
-        params: &PeopleOtherContactsListParams,
-    ) -> Result<PeopleSendOutput<PeopleOtherContactsListResponse>, PeopleClientStdError> {
-        let coroutine = PeopleOtherContactsList::new(&self.auth, read_mask, params)?;
+        read_mask: &[GpeoplePersonField],
+        params: &GpeopleOtherContactsListParams,
+    ) -> Result<GpeopleSendOutput<GpeopleOtherContactsListResponse>, GpeopleClientStdError> {
+        let coroutine = GpeopleOtherContactsList::new(&self.auth, read_mask, params)?;
         self.run(coroutine)
     }
 
@@ -409,10 +424,10 @@ impl PeopleClientStd {
     pub fn other_contacts_search(
         &mut self,
         query: &str,
-        read_mask: &[PeoplePersonField],
+        read_mask: &[GpeoplePersonField],
         page_size: Option<u32>,
-    ) -> Result<PeopleSendOutput<PeopleSearchResponse>, PeopleClientStdError> {
-        let coroutine = PeopleOtherContactsSearch::new(&self.auth, query, read_mask, page_size)?;
+    ) -> Result<GpeopleSendOutput<GpeopleSearchResponse>, GpeopleClientStdError> {
+        let coroutine = GpeopleOtherContactsSearch::new(&self.auth, query, read_mask, page_size)?;
         self.run(coroutine)
     }
 
@@ -421,32 +436,32 @@ impl PeopleClientStd {
     pub fn other_contact_copy(
         &mut self,
         resource_name: &str,
-        copy_mask: &[PeoplePersonField],
-        read_mask: &[PeoplePersonField],
-        sources: &[PeopleReadSourceType],
-    ) -> Result<PeopleSendOutput<PeoplePerson>, PeopleClientStdError> {
+        copy_mask: &[GpeoplePersonField],
+        read_mask: &[GpeoplePersonField],
+        sources: &[GpeopleReadSourceType],
+    ) -> Result<GpeopleSendOutput<GpeoplePerson>, GpeopleClientStdError> {
         let coroutine =
-            PeopleOtherContactCopy::new(&self.auth, resource_name, copy_mask, read_mask, sources)?;
+            GpeopleOtherContactCopy::new(&self.auth, resource_name, copy_mask, read_mask, sources)?;
         self.run(coroutine)
     }
 }
 
-impl fmt::Debug for PeopleClientStd {
+impl fmt::Debug for GpeopleClientStd {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("PeopleClientStd")
+        f.debug_struct("GpeopleClientStd")
             .field("auth", &self.auth)
             .finish_non_exhaustive()
     }
 }
 
-/// Object-safe stream used by [`PeopleClientStd`]; combines `Read`, `Write`,
+/// Object-safe stream used by [`GpeopleClientStd`]; combines `Read`, `Write`,
 /// `Send`, and `Any` so the concrete type can be recovered at runtime.
-pub trait PeopleStream: Read + Write + Send + Any {
+pub trait GpeopleStream: Read + Write + Send + Any {
     /// Return a mutable `Any` reference to the underlying concrete type.
     fn as_any_mut(&mut self) -> &mut dyn Any;
 }
 
-impl<T: Read + Write + Send + Any> PeopleStream for T {
+impl<T: Read + Write + Send + Any> GpeopleStream for T {
     fn as_any_mut(&mut self) -> &mut dyn Any {
         self
     }

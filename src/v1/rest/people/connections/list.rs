@@ -16,11 +16,13 @@ use url::Url;
 
 use crate::{
     coroutine::*,
-    people_try,
+    gpeople_try,
     v1::{
         query::{to_field_mask, to_query_pairs},
-        rest::people::{PeoplePerson, PeoplePersonField, PeopleReadSourceType, PeopleSortOrder},
-        send::{PEOPLE_API_BASE, PeopleSend, PeopleSendError, PeopleSendOutput},
+        rest::people::{
+            GpeoplePerson, GpeoplePersonField, GpeopleReadSourceType, GpeopleSortOrder,
+        },
+        send::{GPEOPLE_API_BASE, GpeopleSend, GpeopleSendError, GpeopleSendOutput},
     },
 };
 
@@ -28,7 +30,7 @@ use crate::{
 /// (`people.connections.list`).
 #[derive(Debug, Clone, Default, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleConnectionsListParams<'a> {
+pub struct GpeopleConnectionsListParams<'a> {
     /// Maximum number of connections to return per page (max 1000).
     pub page_size: Option<u32>,
     /// Page token from a previous response, used to retrieve the next page.
@@ -39,18 +41,18 @@ pub struct PeopleConnectionsListParams<'a> {
     /// Sync token from a previous full listing, for incremental change fetch.
     pub sync_token: Option<&'a str>,
     /// Sort order for the returned connections.
-    pub sort_order: Option<PeopleSortOrder>,
+    pub sort_order: Option<GpeopleSortOrder>,
     /// Data sources to include; defaults to all sources when empty.
-    pub sources: &'a [PeopleReadSourceType],
+    pub sources: &'a [GpeopleReadSourceType],
 }
 
 /// People REST connections listing response (one page of persons).
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleConnectionsListResponse {
+pub struct GpeopleConnectionsListResponse {
     /// Contacts returned for this page.
     #[serde(default)]
-    pub connections: Vec<PeoplePerson>,
+    pub connections: Vec<GpeoplePerson>,
     /// Token for retrieving the next page; absent on the final page.
     #[serde(default)]
     pub next_page_token: Option<String>,
@@ -67,30 +69,30 @@ pub struct PeopleConnectionsListResponse {
 
 /// People REST connections listing, wrapping a page of the authenticated
 /// user's contacts (only `people/me` is a valid owner).
-pub struct PeopleConnectionsList {
-    send: PeopleSend<PeopleConnectionsListResponse>,
+pub struct GpeopleConnectionsList {
+    send: GpeopleSend<GpeopleConnectionsListResponse>,
 }
 
-impl PeopleConnectionsList {
+impl GpeopleConnectionsList {
     /// Build a new connections listing coroutine.
     ///
     /// `person_fields` must be non-empty; `params` carries optional
     /// pagination and sync-token arguments.
     pub fn new(
         auth: &HttpAuthBearer,
-        person_fields: &[PeoplePersonField],
-        params: &PeopleConnectionsListParams,
-    ) -> Result<Self, PeopleSendError> {
+        person_fields: &[GpeoplePersonField],
+        params: &GpeopleConnectionsListParams,
+    ) -> Result<Self, GpeopleSendError> {
         debug!("prepare people connections listing");
         trace!("person_fields: {person_fields:?}");
         trace!("params: {params:?}");
 
         if person_fields.is_empty() {
-            let err = PeopleSendError::InvalidRequest("Person fields cannot be empty".into());
+            let err = GpeopleSendError::InvalidRequest("Person fields cannot be empty".into());
             return Err(err);
         }
 
-        let mut url = Url::parse(PEOPLE_API_BASE)?.join("people/me/connections")?;
+        let mut url = Url::parse(GPEOPLE_API_BASE)?.join("people/me/connections")?;
 
         {
             let mut pairs = url.query_pairs_mut();
@@ -98,20 +100,20 @@ impl PeopleConnectionsList {
             pairs.extend_pairs(to_query_pairs(params));
         }
 
-        let send = PeopleSend::get(auth, url);
+        let send = GpeopleSend::get(auth, url);
 
         Ok(Self { send })
     }
 }
 
-impl PeopleCoroutine for PeopleConnectionsList {
-    type Yield = PeopleYield;
-    type Return = Result<PeopleSendOutput<PeopleConnectionsListResponse>, PeopleSendError>;
+impl GpeopleCoroutine for GpeopleConnectionsList {
+    type Yield = GpeopleYield;
+    type Return = Result<GpeopleSendOutput<GpeopleConnectionsListResponse>, GpeopleSendError>;
 
-    fn resume(&mut self, arg: Option<&[u8]>) -> PeopleCoroutineState<Self::Yield, Self::Return> {
-        let out = people_try!(&mut self.send, arg);
+    fn resume(&mut self, arg: Option<&[u8]>) -> GpeopleCoroutineState<Self::Yield, Self::Return> {
+        let out = gpeople_try!(&mut self.send, arg);
         debug!("people connections listed");
         trace!("out: {out:?}");
-        PeopleCoroutineState::Complete(Ok(out))
+        GpeopleCoroutineState::Complete(Ok(out))
     }
 }

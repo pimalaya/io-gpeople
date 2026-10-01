@@ -32,8 +32,8 @@ The default suite is fully offline: every coroutine is driven against an in-memo
 cargo test
 ```
 
-tests/people.rs is an ignored end-to-end test walking the whole CRUD surface against the live People API. It needs a TLS feature and a `PEOPLE_ACCESS_TOKEN` environment variable, and it deletes everything it creates:
+tests/people.rs is an ignored end-to-end test walking the whole CRUD surface against the live People API. It needs a TLS feature and a `GPEOPLE_ACCESS_TOKEN` environment variable, and it deletes everything it creates:
 
 ```sh
-PEOPLE_ACCESS_TOKEN=<token> cargo test --test people -- --include-ignored
+GPEOPLE_ACCESS_TOKEN=<token> cargo test --test people -- --include-ignored
 ```

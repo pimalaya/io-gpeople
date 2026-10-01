@@ -11,8 +11,10 @@ use url::Url;
 
 use crate::{
     coroutine::*,
-    people_try,
-    v1::send::{PEOPLE_API_BASE, PeopleNoResponse, PeopleSend, PeopleSendError, PeopleSendOutput},
+    gpeople_try,
+    v1::send::{
+        GPEOPLE_API_BASE, GpeopleNoResponse, GpeopleSend, GpeopleSendError, GpeopleSendOutput,
+    },
 };
 
 #[derive(Serialize)]
@@ -22,39 +24,39 @@ struct Request<'a> {
 }
 
 /// People REST contacts batch deletion (500 max), by full resource names.
-pub struct PeopleContactsBatchDelete {
-    send: PeopleSend<PeopleNoResponse>,
+pub struct GpeopleContactsBatchDelete {
+    send: GpeopleSend<GpeopleNoResponse>,
 }
 
-impl PeopleContactsBatchDelete {
+impl GpeopleContactsBatchDelete {
     /// Build a new contacts batch deletion coroutine (500 max).
     ///
     /// `resource_names` must be non-empty; each entry must identify an
     /// existing contact resource.
-    pub fn new(auth: &HttpAuthBearer, resource_names: &[String]) -> Result<Self, PeopleSendError> {
+    pub fn new(auth: &HttpAuthBearer, resource_names: &[String]) -> Result<Self, GpeopleSendError> {
         debug!("prepare people contacts batch deletion");
         trace!("resource_names: {resource_names:?}");
 
         if resource_names.is_empty() {
-            let err = PeopleSendError::InvalidRequest("Resource names cannot be empty".into());
+            let err = GpeopleSendError::InvalidRequest("Resource names cannot be empty".into());
             return Err(err);
         }
 
-        let url = Url::parse(PEOPLE_API_BASE)?.join("./people:batchDeleteContacts")?;
-        let send = PeopleSend::post_json(auth, url, &Request { resource_names })?;
+        let url = Url::parse(GPEOPLE_API_BASE)?.join("./people:batchDeleteContacts")?;
+        let send = GpeopleSend::post_json(auth, url, &Request { resource_names })?;
 
         Ok(Self { send })
     }
 }
 
-impl PeopleCoroutine for PeopleContactsBatchDelete {
-    type Yield = PeopleYield;
-    type Return = Result<PeopleSendOutput<PeopleNoResponse>, PeopleSendError>;
+impl GpeopleCoroutine for GpeopleContactsBatchDelete {
+    type Yield = GpeopleYield;
+    type Return = Result<GpeopleSendOutput<GpeopleNoResponse>, GpeopleSendError>;
 
-    fn resume(&mut self, arg: Option<&[u8]>) -> PeopleCoroutineState<Self::Yield, Self::Return> {
-        let out = people_try!(&mut self.send, arg);
+    fn resume(&mut self, arg: Option<&[u8]>) -> GpeopleCoroutineState<Self::Yield, Self::Return> {
+        let out = gpeople_try!(&mut self.send, arg);
         debug!("people contacts batch deleted");
         trace!("out: {out:?}");
-        PeopleCoroutineState::Complete(Ok(out))
+        GpeopleCoroutineState::Complete(Ok(out))
     }
 }

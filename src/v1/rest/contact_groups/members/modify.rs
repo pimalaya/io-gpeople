@@ -15,15 +15,15 @@ use url::Url;
 
 use crate::{
     coroutine::*,
-    people_try,
-    v1::send::{PEOPLE_API_BASE, PeopleSend, PeopleSendError, PeopleSendOutput},
+    gpeople_try,
+    v1::send::{GPEOPLE_API_BASE, GpeopleSend, GpeopleSendError, GpeopleSendOutput},
 };
 
 /// People REST contact group members modification response (the person
 /// resource names that could not be processed).
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleContactGroupMembersModifyResponse {
+pub struct GpeopleContactGroupMembersModifyResponse {
     /// Person resource names from the request that were not found.
     #[serde(default)]
     pub not_found_resource_names: Vec<String>,
@@ -44,11 +44,11 @@ struct Request<'a> {
 
 /// People REST contact group members modification, adding and/or
 /// removing person resource names.
-pub struct PeopleContactGroupMembersModify {
-    send: PeopleSend<PeopleContactGroupMembersModifyResponse>,
+pub struct GpeopleContactGroupMembersModify {
+    send: GpeopleSend<GpeopleContactGroupMembersModifyResponse>,
 }
 
-impl PeopleContactGroupMembersModify {
+impl GpeopleContactGroupMembersModify {
     /// Build a group-members modification coroutine. At least one of the
     /// add/remove slices must be non-empty; additions require a user group.
     pub fn new(
@@ -56,46 +56,47 @@ impl PeopleContactGroupMembersModify {
         resource_name: &str,
         resource_names_to_add: &[String],
         resource_names_to_remove: &[String],
-    ) -> Result<Self, PeopleSendError> {
+    ) -> Result<Self, GpeopleSendError> {
         debug!("prepare people contact group members modification");
         trace!("resource_name: {resource_name:?}");
         trace!("resource_names_to_add: {resource_names_to_add:?}");
         trace!("resource_names_to_remove: {resource_names_to_remove:?}");
 
         if resource_name.trim().is_empty() {
-            let err = PeopleSendError::InvalidRequest("Group resource name cannot be empty".into());
+            let err =
+                GpeopleSendError::InvalidRequest("Group resource name cannot be empty".into());
             return Err(err);
         }
 
         if resource_names_to_add.is_empty() && resource_names_to_remove.is_empty() {
-            let err = PeopleSendError::InvalidRequest(
+            let err = GpeopleSendError::InvalidRequest(
                 "Resource names to add and to remove cannot both be empty".into(),
             );
             return Err(err);
         }
 
-        let url = Url::parse(PEOPLE_API_BASE)?.join(&format!("{resource_name}/members:modify"))?;
+        let url = Url::parse(GPEOPLE_API_BASE)?.join(&format!("{resource_name}/members:modify"))?;
 
         let request = Request {
             resource_names_to_add,
             resource_names_to_remove,
         };
 
-        let send = PeopleSend::post_json(auth, url, &request)?;
+        let send = GpeopleSend::post_json(auth, url, &request)?;
 
         Ok(Self { send })
     }
 }
 
-impl PeopleCoroutine for PeopleContactGroupMembersModify {
-    type Yield = PeopleYield;
+impl GpeopleCoroutine for GpeopleContactGroupMembersModify {
+    type Yield = GpeopleYield;
     type Return =
-        Result<PeopleSendOutput<PeopleContactGroupMembersModifyResponse>, PeopleSendError>;
+        Result<GpeopleSendOutput<GpeopleContactGroupMembersModifyResponse>, GpeopleSendError>;
 
-    fn resume(&mut self, arg: Option<&[u8]>) -> PeopleCoroutineState<Self::Yield, Self::Return> {
-        let out = people_try!(&mut self.send, arg);
+    fn resume(&mut self, arg: Option<&[u8]>) -> GpeopleCoroutineState<Self::Yield, Self::Return> {
+        let out = gpeople_try!(&mut self.send, arg);
         debug!("people contact group members modified");
         trace!("out: {out:?}");
-        PeopleCoroutineState::Complete(Ok(out))
+        GpeopleCoroutineState::Complete(Ok(out))
     }
 }

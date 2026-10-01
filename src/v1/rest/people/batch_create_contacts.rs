@@ -11,23 +11,23 @@ use url::Url;
 
 use crate::{
     coroutine::*,
-    people_try,
+    gpeople_try,
     v1::{
         query::to_field_mask,
         rest::people::{
-            PeoplePerson, PeoplePersonField, PeoplePersonResponse, PeopleReadSourceType,
+            GpeoplePerson, GpeoplePersonField, GpeoplePersonResponse, GpeopleReadSourceType,
         },
-        send::{PEOPLE_API_BASE, PeopleSend, PeopleSendError, PeopleSendOutput},
+        send::{GPEOPLE_API_BASE, GpeopleSend, GpeopleSendError, GpeopleSendOutput},
     },
 };
 
 /// People REST contacts batch creation response.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleContactsBatchCreateResponse {
+pub struct GpeopleContactsBatchCreateResponse {
     /// Person responses for each newly created contact, in request order.
     #[serde(default)]
-    pub created_people: Vec<PeoplePersonResponse>,
+    pub created_people: Vec<GpeoplePersonResponse>,
 }
 
 #[derive(Serialize)]
@@ -36,47 +36,47 @@ struct Request<'a> {
     contacts: Vec<Contact<'a>>,
     read_mask: String,
     #[serde(skip_serializing_if = "<[_]>::is_empty")]
-    sources: &'a [PeopleReadSourceType],
+    sources: &'a [GpeopleReadSourceType],
 }
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct Contact<'a> {
-    contact_person: &'a PeoplePerson,
+    contact_person: &'a GpeoplePerson,
 }
 
 /// People REST contacts batch creation (200 max).
-pub struct PeopleContactsBatchCreate {
-    send: PeopleSend<PeopleContactsBatchCreateResponse>,
+pub struct GpeopleContactsBatchCreate {
+    send: GpeopleSend<GpeopleContactsBatchCreateResponse>,
 }
 
-impl PeopleContactsBatchCreate {
+impl GpeopleContactsBatchCreate {
     /// Build a new contacts batch creation coroutine (200 max).
     ///
     /// `persons` and `read_mask` must be non-empty; `read_mask` controls
     /// which fields are populated on the returned persons.
     pub fn new(
         auth: &HttpAuthBearer,
-        persons: &[PeoplePerson],
-        read_mask: &[PeoplePersonField],
-        sources: &[PeopleReadSourceType],
-    ) -> Result<Self, PeopleSendError> {
+        persons: &[GpeoplePerson],
+        read_mask: &[GpeoplePersonField],
+        sources: &[GpeopleReadSourceType],
+    ) -> Result<Self, GpeopleSendError> {
         debug!("prepare people contacts batch creation");
         trace!("persons: {persons:?}");
         trace!("read_mask: {read_mask:?}");
         trace!("sources: {sources:?}");
 
         if persons.is_empty() {
-            let err = PeopleSendError::InvalidRequest("Contacts cannot be empty".into());
+            let err = GpeopleSendError::InvalidRequest("Contacts cannot be empty".into());
             return Err(err);
         }
 
         if read_mask.is_empty() {
-            let err = PeopleSendError::InvalidRequest("Read mask cannot be empty".into());
+            let err = GpeopleSendError::InvalidRequest("Read mask cannot be empty".into());
             return Err(err);
         }
 
-        let url = Url::parse(PEOPLE_API_BASE)?.join("./people:batchCreateContacts")?;
+        let url = Url::parse(GPEOPLE_API_BASE)?.join("./people:batchCreateContacts")?;
 
         let request = Request {
             contacts: persons
@@ -87,20 +87,20 @@ impl PeopleContactsBatchCreate {
             sources,
         };
 
-        let send = PeopleSend::post_json(auth, url, &request)?;
+        let send = GpeopleSend::post_json(auth, url, &request)?;
 
         Ok(Self { send })
     }
 }
 
-impl PeopleCoroutine for PeopleContactsBatchCreate {
-    type Yield = PeopleYield;
-    type Return = Result<PeopleSendOutput<PeopleContactsBatchCreateResponse>, PeopleSendError>;
+impl GpeopleCoroutine for GpeopleContactsBatchCreate {
+    type Yield = GpeopleYield;
+    type Return = Result<GpeopleSendOutput<GpeopleContactsBatchCreateResponse>, GpeopleSendError>;
 
-    fn resume(&mut self, arg: Option<&[u8]>) -> PeopleCoroutineState<Self::Yield, Self::Return> {
-        let out = people_try!(&mut self.send, arg);
+    fn resume(&mut self, arg: Option<&[u8]>) -> GpeopleCoroutineState<Self::Yield, Self::Return> {
+        let out = gpeople_try!(&mut self.send, arg);
         debug!("people contacts batch created");
         trace!("out: {out:?}");
-        PeopleCoroutineState::Complete(Ok(out))
+        GpeopleCoroutineState::Complete(Ok(out))
     }
 }

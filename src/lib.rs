@@ -32,35 +32,35 @@
 //!
 //! Every People call is an independent HTTP request/response, so the
 //! crate has a single shared primitive every coroutine delegates to:
-//! [`v1::send::PeopleSend`], wrapping io-http's `Http11Send`. It builds
+//! [`v1::send::GpeopleSend`], wrapping io-http's `Http11Send`. It builds
 //! the request (the `Authorization` header from the caller's bearer
 //! token, `Accept: application/json`, an optional JSON body) and on
 //! completion deserialises the 2xx body into `T`, or parses People's
-//! JSON error envelope into `PeopleSendError`. A 3xx surfaces as an
+//! JSON error envelope into `GpeopleSendError`. A 3xx surfaces as an
 //! unexpected-redirect error; redirects are never followed. Empty 2xx
-//! bodies (delete, batch, stop) deserialise into the `PeopleNoResponse`
+//! bodies (delete, batch, stop) deserialise into the `GpeopleNoResponse`
 //! unit marker.
 //!
 //! ## The coroutine contract
 //!
 //! [`coroutine`] holds the crate-local, version-agnostic shape: the
-//! [`coroutine::PeopleCoroutine`] trait with `resume(Option<&[u8]>)`,
-//! the [`coroutine::PeopleCoroutineState`] (`Yielded` or `Complete`)
-//! and the [`coroutine::PeopleYield`] (`WantsRead` / `WantsWrite`, a
+//! [`coroutine::GpeopleCoroutine`] trait with `resume(Option<&[u8]>)`,
+//! the [`coroutine::GpeopleCoroutineState`] (`Yielded` or `Complete`)
+//! and the [`coroutine::GpeopleYield`] (`WantsRead` / `WantsWrite`, a
 //! People call being I/O-only: no clock, randomness or filesystem). The
-//! `people_try!` macro is the coroutine `?`. Because each call is a
+//! `gpeople_try!` macro is the coroutine `?`. Because each call is a
 //! single I/O step, every REST coroutine is a thin wrapper holding the
 //! send directly, with no multi-variant `State` enum.
 //!
 //! ## Types
 //!
 //! Domain types are `People`-prefixed
-//! ([`v1::rest::people::PeoplePerson`], ...), never re-exported at the
+//! ([`v1::rest::people::GpeoplePerson`], ...), never re-exported at the
 //! crate root, and mirror the REST schema fully. A full-resource request
 //! body takes the whole resource by reference; enum-valued wire fields
 //! are typed `People`-prefixed enums, while free-form `type` labels stay
 //! `Option<String>` since the API accepts custom values there. Field
-//! masks take `&[PeoplePersonField]` / `&[PeopleGroupField]` joined by
+//! masks take `&[GpeoplePersonField]` / `&[GpeopleGroupField]` joined by
 //! [`v1::query::to_field_mask`]; list methods take a borrowed `*Params`
 //! struct flattened into query pairs by [`v1::query`]'s tiny no_std serde
 //! serializer.
@@ -79,7 +79,7 @@
 //! ## The std client
 //!
 //! The optional [`v1::client`] module (`client` feature) is the
-//! std-blocking [`v1::client::PeopleClientStd`]: a light client wrapping
+//! std-blocking [`v1::client::GpeopleClientStd`]: a light client wrapping
 //! any stream you opened yourself, or a full client opening the TCP/TLS
 //! connection itself when a TLS feature (`rustls-ring` default,
 //! `rustls-aws`, `native-tls`) is enabled. It offers one convenience

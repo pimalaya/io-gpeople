@@ -15,21 +15,21 @@ use url::Url;
 
 use crate::{
     coroutine::*,
-    people_try,
+    gpeople_try,
     v1::{
         query::to_field_mask,
-        rest::people::{PeoplePerson, PeoplePersonField, PeopleReadSourceType},
-        send::{PEOPLE_API_BASE, PeopleSend, PeopleSendError, PeopleSendOutput},
+        rest::people::{GpeoplePerson, GpeoplePersonField, GpeopleReadSourceType},
+        send::{GPEOPLE_API_BASE, GpeopleSend, GpeopleSendError, GpeopleSendOutput},
     },
 };
 
 /// People REST contact photo update response.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleContactPhotoUpdateResponse {
+pub struct GpeopleContactPhotoUpdateResponse {
     /// The updated person, populated when a `person_fields` mask was given.
     #[serde(default)]
-    pub person: Option<PeoplePerson>,
+    pub person: Option<GpeoplePerson>,
 }
 
 #[derive(Serialize)]
@@ -39,15 +39,15 @@ struct Request<'a> {
     #[serde(skip_serializing_if = "String::is_empty")]
     person_fields: String,
     #[serde(skip_serializing_if = "<[_]>::is_empty")]
-    sources: &'a [PeopleReadSourceType],
+    sources: &'a [GpeopleReadSourceType],
 }
 
 /// People REST contact photo update, from raw JPEG or PNG bytes.
-pub struct PeopleContactPhotoUpdate {
-    send: PeopleSend<PeopleContactPhotoUpdateResponse>,
+pub struct GpeopleContactPhotoUpdate {
+    send: GpeopleSend<GpeopleContactPhotoUpdateResponse>,
 }
 
-impl PeopleContactPhotoUpdate {
+impl GpeopleContactPhotoUpdate {
     /// Build a new contact photo update coroutine.
     ///
     /// `photo` must be non-empty JPEG or PNG bytes; they are base64-encoded
@@ -56,9 +56,9 @@ impl PeopleContactPhotoUpdate {
         auth: &HttpAuthBearer,
         resource_name: &str,
         photo: &[u8],
-        person_fields: &[PeoplePersonField],
-        sources: &[PeopleReadSourceType],
-    ) -> Result<Self, PeopleSendError> {
+        person_fields: &[GpeoplePersonField],
+        sources: &[GpeopleReadSourceType],
+    ) -> Result<Self, GpeopleSendError> {
         debug!("prepare people contact photo for update");
         trace!("resource_name: {resource_name:?}");
         trace!("person_fields: {person_fields:?}");
@@ -66,17 +66,17 @@ impl PeopleContactPhotoUpdate {
 
         if resource_name.trim().is_empty() {
             let err =
-                PeopleSendError::InvalidRequest("Person resource name cannot be empty".into());
+                GpeopleSendError::InvalidRequest("Person resource name cannot be empty".into());
             return Err(err);
         }
 
         if photo.is_empty() {
-            let err = PeopleSendError::InvalidRequest("Photo bytes cannot be empty".into());
+            let err = GpeopleSendError::InvalidRequest("Photo bytes cannot be empty".into());
             return Err(err);
         }
 
         let url =
-            Url::parse(PEOPLE_API_BASE)?.join(&format!("{resource_name}:updateContactPhoto"))?;
+            Url::parse(GPEOPLE_API_BASE)?.join(&format!("{resource_name}:updateContactPhoto"))?;
 
         let request = Request {
             photo_bytes: STANDARD.encode(photo),
@@ -84,20 +84,20 @@ impl PeopleContactPhotoUpdate {
             sources,
         };
 
-        let send = PeopleSend::patch_json(auth, url, &request)?;
+        let send = GpeopleSend::patch_json(auth, url, &request)?;
 
         Ok(Self { send })
     }
 }
 
-impl PeopleCoroutine for PeopleContactPhotoUpdate {
-    type Yield = PeopleYield;
-    type Return = Result<PeopleSendOutput<PeopleContactPhotoUpdateResponse>, PeopleSendError>;
+impl GpeopleCoroutine for GpeopleContactPhotoUpdate {
+    type Yield = GpeopleYield;
+    type Return = Result<GpeopleSendOutput<GpeopleContactPhotoUpdateResponse>, GpeopleSendError>;
 
-    fn resume(&mut self, arg: Option<&[u8]>) -> PeopleCoroutineState<Self::Yield, Self::Return> {
-        let out = people_try!(&mut self.send, arg);
+    fn resume(&mut self, arg: Option<&[u8]>) -> GpeopleCoroutineState<Self::Yield, Self::Return> {
+        let out = gpeople_try!(&mut self.send, arg);
         debug!("people contact photo updated");
         trace!("out: {out:?}");
-        PeopleCoroutineState::Complete(Ok(out))
+        GpeopleCoroutineState::Complete(Ok(out))
     }
 }

@@ -15,40 +15,40 @@ use url::Url;
 
 use crate::{
     coroutine::*,
-    people_try,
+    gpeople_try,
     v1::{
         query::to_field_mask,
-        rest::people::{PeoplePersonField, PeopleSearchResponse},
-        send::{PEOPLE_API_BASE, PeopleSend, PeopleSendError, PeopleSendOutput},
+        rest::people::{GpeoplePersonField, GpeopleSearchResponse},
+        send::{GPEOPLE_API_BASE, GpeopleSend, GpeopleSendError, GpeopleSendOutput},
     },
 };
 
 /// People REST "Other contacts" search, by plain-text prefix query.
-pub struct PeopleOtherContactsSearch {
-    send: PeopleSend<PeopleSearchResponse>,
+pub struct GpeopleOtherContactsSearch {
+    send: GpeopleSend<GpeopleSearchResponse>,
 }
 
-impl PeopleOtherContactsSearch {
+impl GpeopleOtherContactsSearch {
     /// Build a coroutine that searches "Other contacts" using a
     /// plain-text prefix `query`, returning the specified `read_mask`
     /// fields and at most `page_size` results.
     pub fn new(
         auth: &HttpAuthBearer,
         query: &str,
-        read_mask: &[PeoplePersonField],
+        read_mask: &[GpeoplePersonField],
         page_size: Option<u32>,
-    ) -> Result<Self, PeopleSendError> {
+    ) -> Result<Self, GpeopleSendError> {
         debug!("prepare people other contacts search");
         trace!("query: {query:?}");
         trace!("read_mask: {read_mask:?}");
         trace!("page_size: {page_size:?}");
 
         if read_mask.is_empty() {
-            let err = PeopleSendError::InvalidRequest("Read mask cannot be empty".into());
+            let err = GpeopleSendError::InvalidRequest("Read mask cannot be empty".into());
             return Err(err);
         }
 
-        let mut url = Url::parse(PEOPLE_API_BASE)?.join("./otherContacts:search")?;
+        let mut url = Url::parse(GPEOPLE_API_BASE)?.join("./otherContacts:search")?;
 
         {
             let mut pairs = url.query_pairs_mut();
@@ -59,22 +59,22 @@ impl PeopleOtherContactsSearch {
             }
         }
 
-        let send = PeopleSend::get(auth, url);
+        let send = GpeopleSend::get(auth, url);
 
         Ok(Self { send })
     }
 }
 
-impl PeopleCoroutine for PeopleOtherContactsSearch {
-    type Yield = PeopleYield;
-    type Return = Result<PeopleSendOutput<PeopleSearchResponse>, PeopleSendError>;
+impl GpeopleCoroutine for GpeopleOtherContactsSearch {
+    type Yield = GpeopleYield;
+    type Return = Result<GpeopleSendOutput<GpeopleSearchResponse>, GpeopleSendError>;
 
     /// Drive the HTTP exchange one step; yields I/O wants until the
     /// response is fully received, then completes with the search results.
-    fn resume(&mut self, arg: Option<&[u8]>) -> PeopleCoroutineState<Self::Yield, Self::Return> {
-        let out = people_try!(&mut self.send, arg);
+    fn resume(&mut self, arg: Option<&[u8]>) -> GpeopleCoroutineState<Self::Yield, Self::Return> {
+        let out = gpeople_try!(&mut self.send, arg);
         debug!("people other contacts searched");
         trace!("out: {out:?}");
-        PeopleCoroutineState::Complete(Ok(out))
+        GpeopleCoroutineState::Complete(Ok(out))
     }
 }

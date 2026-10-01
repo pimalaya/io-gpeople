@@ -14,20 +14,20 @@ use url::Url;
 
 use crate::{
     coroutine::*,
-    people_try,
+    gpeople_try,
     v1::{
         query::{to_field_mask, to_field_pairs},
-        rest::people::{PeoplePersonField, PeopleReadSourceType, PeopleSearchResponse},
-        send::{PEOPLE_API_BASE, PeopleSend, PeopleSendError, PeopleSendOutput},
+        rest::people::{GpeoplePersonField, GpeopleReadSourceType, GpeopleSearchResponse},
+        send::{GPEOPLE_API_BASE, GpeopleSend, GpeopleSendError, GpeopleSendOutput},
     },
 };
 
 /// People REST contacts search, by plain-text prefix query.
-pub struct PeopleContactsSearch {
-    send: PeopleSend<PeopleSearchResponse>,
+pub struct GpeopleContactsSearch {
+    send: GpeopleSend<GpeopleSearchResponse>,
 }
 
-impl PeopleContactsSearch {
+impl GpeopleContactsSearch {
     /// Build a new contacts search coroutine.
     ///
     /// `read_mask` must be non-empty. `query` is matched as a prefix phrase
@@ -35,10 +35,10 @@ impl PeopleContactsSearch {
     pub fn new(
         auth: &HttpAuthBearer,
         query: &str,
-        read_mask: &[PeoplePersonField],
+        read_mask: &[GpeoplePersonField],
         page_size: Option<u32>,
-        sources: &[PeopleReadSourceType],
-    ) -> Result<Self, PeopleSendError> {
+        sources: &[GpeopleReadSourceType],
+    ) -> Result<Self, GpeopleSendError> {
         debug!("prepare people contacts search");
         trace!("query: {query:?}");
         trace!("read_mask: {read_mask:?}");
@@ -46,11 +46,11 @@ impl PeopleContactsSearch {
         trace!("sources: {sources:?}");
 
         if read_mask.is_empty() {
-            let err = PeopleSendError::InvalidRequest("Read mask cannot be empty".into());
+            let err = GpeopleSendError::InvalidRequest("Read mask cannot be empty".into());
             return Err(err);
         }
 
-        let mut url = Url::parse(PEOPLE_API_BASE)?.join("./people:searchContacts")?;
+        let mut url = Url::parse(GPEOPLE_API_BASE)?.join("./people:searchContacts")?;
 
         {
             let mut pairs = url.query_pairs_mut();
@@ -62,20 +62,20 @@ impl PeopleContactsSearch {
             pairs.extend_pairs(to_field_pairs("sources", sources));
         }
 
-        let send = PeopleSend::get(auth, url);
+        let send = GpeopleSend::get(auth, url);
 
         Ok(Self { send })
     }
 }
 
-impl PeopleCoroutine for PeopleContactsSearch {
-    type Yield = PeopleYield;
-    type Return = Result<PeopleSendOutput<PeopleSearchResponse>, PeopleSendError>;
+impl GpeopleCoroutine for GpeopleContactsSearch {
+    type Yield = GpeopleYield;
+    type Return = Result<GpeopleSendOutput<GpeopleSearchResponse>, GpeopleSendError>;
 
-    fn resume(&mut self, arg: Option<&[u8]>) -> PeopleCoroutineState<Self::Yield, Self::Return> {
-        let out = people_try!(&mut self.send, arg);
+    fn resume(&mut self, arg: Option<&[u8]>) -> GpeopleCoroutineState<Self::Yield, Self::Return> {
+        let out = gpeople_try!(&mut self.send, arg);
         debug!("people contacts searched");
         trace!("out: {out:?}");
-        PeopleCoroutineState::Complete(Ok(out))
+        GpeopleCoroutineState::Complete(Ok(out))
     }
 }

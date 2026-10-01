@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING** Renamed every `People*` type to `Gpeople*`, the `people_try!` macro to `gpeople_try!` and `PEOPLE_API_BASE` to `GPEOPLE_API_BASE`, matching io-gcal and io-gmail. The `rest::people` module keeps the API's resource name.
+
+### Added
+
+- **BREAKING** Added `GpeopleClientStdConnectOptions::proxy`, routing the connection through a SOCKS5 or HTTP proxy. The default resolves it from the environment, as before.
+
+### Fixed
+
+- Fixed the `client` feature failing to build without a TLS feature.
+
 ## [0.3.1] - 2026-09-28
 
 ### Changed

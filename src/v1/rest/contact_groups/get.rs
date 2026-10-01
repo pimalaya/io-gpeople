@@ -10,39 +10,40 @@ use url::Url;
 
 use crate::{
     coroutine::*,
-    people_try,
+    gpeople_try,
     v1::{
         query::to_field_mask,
-        rest::contact_groups::{PeopleContactGroup, PeopleGroupField},
-        send::{PEOPLE_API_BASE, PeopleSend, PeopleSendError, PeopleSendOutput},
+        rest::contact_groups::{GpeopleContactGroup, GpeopleGroupField},
+        send::{GPEOPLE_API_BASE, GpeopleSend, GpeopleSendError, GpeopleSendOutput},
     },
 };
 
 /// People REST contact group retrieval, by full resource name.
-pub struct PeopleContactGroupGet {
-    send: PeopleSend<PeopleContactGroup>,
+pub struct GpeopleContactGroupGet {
+    send: GpeopleSend<GpeopleContactGroup>,
 }
 
-impl PeopleContactGroupGet {
+impl GpeopleContactGroupGet {
     /// Build a single contact-group retrieval coroutine for the given
     /// resource name, optional member cap, and field mask.
     pub fn new(
         auth: &HttpAuthBearer,
         resource_name: &str,
         max_members: Option<u32>,
-        group_fields: &[PeopleGroupField],
-    ) -> Result<Self, PeopleSendError> {
+        group_fields: &[GpeopleGroupField],
+    ) -> Result<Self, GpeopleSendError> {
         debug!("prepare people contact group retrieval");
         trace!("resource_name: {resource_name:?}");
         trace!("max_members: {max_members:?}");
         trace!("group_fields: {group_fields:?}");
 
         if resource_name.trim().is_empty() {
-            let err = PeopleSendError::InvalidRequest("Group resource name cannot be empty".into());
+            let err =
+                GpeopleSendError::InvalidRequest("Group resource name cannot be empty".into());
             return Err(err);
         }
 
-        let mut url = Url::parse(PEOPLE_API_BASE)?.join(resource_name)?;
+        let mut url = Url::parse(GPEOPLE_API_BASE)?.join(resource_name)?;
 
         {
             let mut pairs = url.query_pairs_mut();
@@ -54,20 +55,20 @@ impl PeopleContactGroupGet {
             }
         }
 
-        let send = PeopleSend::get(auth, url);
+        let send = GpeopleSend::get(auth, url);
 
         Ok(Self { send })
     }
 }
 
-impl PeopleCoroutine for PeopleContactGroupGet {
-    type Yield = PeopleYield;
-    type Return = Result<PeopleSendOutput<PeopleContactGroup>, PeopleSendError>;
+impl GpeopleCoroutine for GpeopleContactGroupGet {
+    type Yield = GpeopleYield;
+    type Return = Result<GpeopleSendOutput<GpeopleContactGroup>, GpeopleSendError>;
 
-    fn resume(&mut self, arg: Option<&[u8]>) -> PeopleCoroutineState<Self::Yield, Self::Return> {
-        let out = people_try!(&mut self.send, arg);
+    fn resume(&mut self, arg: Option<&[u8]>) -> GpeopleCoroutineState<Self::Yield, Self::Return> {
+        let out = gpeople_try!(&mut self.send, arg);
         debug!("people contact group retrieved");
         trace!("out: {out:?}");
-        PeopleCoroutineState::Complete(Ok(out))
+        GpeopleCoroutineState::Complete(Ok(out))
     }
 }

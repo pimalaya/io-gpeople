@@ -15,18 +15,18 @@ use url::Url;
 
 use crate::{
     coroutine::*,
-    people_try,
+    gpeople_try,
     v1::{
         query::to_field_mask,
-        rest::contact_groups::{PeopleContactGroup, PeopleGroupField},
-        send::{PEOPLE_API_BASE, PeopleSend, PeopleSendError, PeopleSendOutput},
+        rest::contact_groups::{GpeopleContactGroup, GpeopleGroupField},
+        send::{GPEOPLE_API_BASE, GpeopleSend, GpeopleSendError, GpeopleSendOutput},
     },
 };
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct Request<'a> {
-    contact_group: &'a PeopleContactGroup,
+    contact_group: &'a GpeopleContactGroup,
     #[serde(skip_serializing_if = "String::is_empty")]
     update_group_fields: String,
     #[serde(skip_serializing_if = "String::is_empty")]
@@ -35,30 +35,31 @@ struct Request<'a> {
 
 /// People REST contact group update, replacing the masked fields (only
 /// `name` and `clientData` can be updated).
-pub struct PeopleContactGroupUpdate {
-    send: PeopleSend<PeopleContactGroup>,
+pub struct GpeopleContactGroupUpdate {
+    send: GpeopleSend<GpeopleContactGroup>,
 }
 
-impl PeopleContactGroupUpdate {
+impl GpeopleContactGroupUpdate {
     /// Build a contact-group update coroutine. `update_group_fields` names
     /// the fields to replace; `read_group_fields` controls the response.
     pub fn new(
         auth: &HttpAuthBearer,
-        group: &PeopleContactGroup,
-        update_group_fields: &[PeopleGroupField],
-        read_group_fields: &[PeopleGroupField],
-    ) -> Result<Self, PeopleSendError> {
+        group: &GpeopleContactGroup,
+        update_group_fields: &[GpeopleGroupField],
+        read_group_fields: &[GpeopleGroupField],
+    ) -> Result<Self, GpeopleSendError> {
         debug!("prepare people contact group for update");
         trace!("group: {group:?}");
         trace!("update_group_fields: {update_group_fields:?}");
         trace!("read_group_fields: {read_group_fields:?}");
 
         if group.resource_name.trim().is_empty() {
-            let err = PeopleSendError::InvalidRequest("Group resource name cannot be empty".into());
+            let err =
+                GpeopleSendError::InvalidRequest("Group resource name cannot be empty".into());
             return Err(err);
         }
 
-        let url = Url::parse(PEOPLE_API_BASE)?.join(&group.resource_name)?;
+        let url = Url::parse(GPEOPLE_API_BASE)?.join(&group.resource_name)?;
 
         let request = Request {
             contact_group: group,
@@ -66,20 +67,20 @@ impl PeopleContactGroupUpdate {
             read_group_fields: to_field_mask(read_group_fields),
         };
 
-        let send = PeopleSend::put_json(auth, url, &request)?;
+        let send = GpeopleSend::put_json(auth, url, &request)?;
 
         Ok(Self { send })
     }
 }
 
-impl PeopleCoroutine for PeopleContactGroupUpdate {
-    type Yield = PeopleYield;
-    type Return = Result<PeopleSendOutput<PeopleContactGroup>, PeopleSendError>;
+impl GpeopleCoroutine for GpeopleContactGroupUpdate {
+    type Yield = GpeopleYield;
+    type Return = Result<GpeopleSendOutput<GpeopleContactGroup>, GpeopleSendError>;
 
-    fn resume(&mut self, arg: Option<&[u8]>) -> PeopleCoroutineState<Self::Yield, Self::Return> {
-        let out = people_try!(&mut self.send, arg);
+    fn resume(&mut self, arg: Option<&[u8]>) -> GpeopleCoroutineState<Self::Yield, Self::Return> {
+        let out = gpeople_try!(&mut self.send, arg);
         debug!("people contact group updated");
         trace!("out: {out:?}");
-        PeopleCoroutineState::Complete(Ok(out))
+        GpeopleCoroutineState::Complete(Ok(out))
     }
 }

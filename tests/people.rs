@@ -14,7 +14,7 @@
 //! https://www.googleapis.com/auth/contacts.other.readonly scopes:
 //!
 //! ```sh
-//! PEOPLE_ACCESS_TOKEN="<token>" \
+//! GPEOPLE_ACCESS_TOKEN="<token>" \
 //! cargo test --test people -- --include-ignored
 //! ```
 
@@ -24,32 +24,28 @@ use std::{
 };
 
 use io_gpeople::v1::{
-    client::{PeopleClientStd, PeopleClientStdConnectOptions},
+    client::GpeopleClientStd,
     rest::{
-        contact_groups::{PeopleContactGroup, PeopleGroupField},
-        other_contacts::list::PeopleOtherContactsListParams,
+        contact_groups::{GpeopleContactGroup, GpeopleGroupField},
+        other_contacts::list::GpeopleOtherContactsListParams,
         people::{
-            PeopleEmailAddress, PeopleName, PeoplePerson, PeoplePersonField,
-            batch_create_contacts::PeopleContactsBatchCreate,
-            batch_delete_contacts::PeopleContactsBatchDelete,
-            batch_update_contacts::PeopleContactsBatchUpdate,
-            connections::list::PeopleConnectionsListParams, get_batch_get::PeoplePersonsBatchGet,
+            GpeopleEmailAddress, GpeopleName, GpeoplePerson, GpeoplePersonField,
+            batch_create_contacts::GpeopleContactsBatchCreate,
+            batch_delete_contacts::GpeopleContactsBatchDelete,
+            batch_update_contacts::GpeopleContactsBatchUpdate,
+            connections::list::GpeopleConnectionsListParams, get_batch_get::GpeoplePersonsBatchGet,
         },
     },
 };
-use pimalaya_stream::tls::Tls;
 
 #[test]
-#[ignore = "requires PEOPLE_ACCESS_TOKEN env var and --include-ignored"]
+#[ignore = "requires GPEOPLE_ACCESS_TOKEN env var and --include-ignored"]
 fn people() {
     env_logger::try_init().ok();
 
-    let token = env::var("PEOPLE_ACCESS_TOKEN").expect("PEOPLE_ACCESS_TOKEN not set");
+    let token = env::var("GPEOPLE_ACCESS_TOKEN").expect("GPEOPLE_ACCESS_TOKEN not set");
 
-    let options = PeopleClientStdConnectOptions {
-        tls: Tls::default(),
-    };
-    let mut client = PeopleClientStd::connect(token, options).expect("connect");
+    let mut client = GpeopleClientStd::connect(token, Default::default()).expect("connect");
     let auth = client.auth.clone();
 
     let ts = SystemTime::now()
@@ -61,12 +57,15 @@ fn people() {
     let contact_name = format!("io-gpeople-test-contact-{ts}");
     let contact_name_renamed = format!("{contact_name}-renamed");
 
-    let name_fields = &[PeoplePersonField::Names, PeoplePersonField::EmailAddresses];
+    let name_fields = &[
+        GpeoplePersonField::Names,
+        GpeoplePersonField::EmailAddresses,
+    ];
 
     // ── CONNECTIONS LIST (baseline) ──────────────────────────────────────────
 
     client
-        .connections_list(name_fields, &PeopleConnectionsListParams::default())
+        .connections_list(name_fields, &GpeopleConnectionsListParams::default())
         .expect("connections list");
 
     // ── CONTACT GROUPS LIST (baseline) ───────────────────────────────────────
@@ -85,7 +84,7 @@ fn people() {
 
     // ── CONTACT GROUP CREATE ─────────────────────────────────────────────────
 
-    let new_group = PeopleContactGroup {
+    let new_group = GpeopleContactGroup {
         name: Some(group_name.clone()),
         ..Default::default()
     };
@@ -113,12 +112,12 @@ fn people() {
 
     // ── CONTACT GROUP UPDATE (rename) ────────────────────────────────────────
 
-    let renamed_group = PeopleContactGroup {
+    let renamed_group = GpeopleContactGroup {
         name: Some(group_name_renamed.clone()),
         ..fetched_group
     };
     let renamed = client
-        .contact_group_update(&renamed_group, &[PeopleGroupField::Name], &[])
+        .contact_group_update(&renamed_group, &[GpeopleGroupField::Name], &[])
         .expect("contact group update")
         .response;
     assert_eq!(
@@ -129,12 +128,12 @@ fn people() {
 
     // ── CONTACT CREATE ───────────────────────────────────────────────────────
 
-    let new_contact = PeoplePerson {
-        names: vec![PeopleName {
+    let new_contact = GpeoplePerson {
+        names: vec![GpeopleName {
             given_name: Some(contact_name.clone()),
             ..Default::default()
         }],
-        email_addresses: vec![PeopleEmailAddress {
+        email_addresses: vec![GpeopleEmailAddress {
             value: Some(format!("io-gpeople-test-{ts}@example.com")),
             ..Default::default()
         }],
@@ -164,8 +163,8 @@ fn people() {
 
     // ── CONTACT UPDATE (rename) ──────────────────────────────────────────────
 
-    let renamed_contact = PeoplePerson {
-        names: vec![PeopleName {
+    let renamed_contact = GpeoplePerson {
+        names: vec![GpeopleName {
             given_name: Some(contact_name_renamed.clone()),
             ..Default::default()
         }],
@@ -174,7 +173,7 @@ fn people() {
     let renamed = client
         .contact_update(
             &renamed_contact,
-            &[PeoplePersonField::Names],
+            &[GpeoplePersonField::Names],
             name_fields,
             &[],
         )
@@ -222,9 +221,9 @@ fn people() {
 
     // ── CONTACTS BATCH CREATE, GET, UPDATE then DELETE ───────────────────────
 
-    let batch_contacts: Vec<PeoplePerson> = (0..2)
-        .map(|i| PeoplePerson {
-            names: vec![PeopleName {
+    let batch_contacts: Vec<GpeoplePerson> = (0..2)
+        .map(|i| GpeoplePerson {
+            names: vec![GpeopleName {
                 given_name: Some(format!("{contact_name}-batch-{i}")),
                 ..Default::default()
             }],
@@ -232,7 +231,7 @@ fn people() {
         })
         .collect();
     let coroutine =
-        PeopleContactsBatchCreate::new(&auth, &batch_contacts, &[PeoplePersonField::Names], &[])
+        GpeopleContactsBatchCreate::new(&auth, &batch_contacts, &[GpeoplePersonField::Names], &[])
             .expect("contacts batch create coroutine");
     let created = client
         .run(coroutine)
@@ -256,10 +255,10 @@ fn people() {
         "batch create should expose both created resource names"
     );
 
-    let coroutine = PeoplePersonsBatchGet::new(
+    let coroutine = GpeoplePersonsBatchGet::new(
         &auth,
         &batch_resource_names,
-        &[PeoplePersonField::Names],
+        &[GpeoplePersonField::Names],
         &[],
     )
     .expect("persons batch get coroutine");
@@ -270,12 +269,12 @@ fn people() {
         "batch get should return both contacts"
     );
 
-    let batch_renamed: Vec<PeoplePerson> = fetched
+    let batch_renamed: Vec<GpeoplePerson> = fetched
         .responses
         .iter()
         .filter_map(|response| response.person.clone())
-        .map(|person| PeoplePerson {
-            names: vec![PeopleName {
+        .map(|person| GpeoplePerson {
+            names: vec![GpeopleName {
                 given_name: person.names[0]
                     .given_name
                     .as_ref()
@@ -285,11 +284,11 @@ fn people() {
             ..person
         })
         .collect();
-    let coroutine = PeopleContactsBatchUpdate::new(
+    let coroutine = GpeopleContactsBatchUpdate::new(
         &auth,
         &batch_renamed,
-        &[PeoplePersonField::Names],
-        &[PeoplePersonField::Names],
+        &[GpeoplePersonField::Names],
+        &[GpeoplePersonField::Names],
         &[],
     )
     .expect("contacts batch update coroutine");
@@ -303,7 +302,7 @@ fn people() {
         "batch update should return both contacts"
     );
 
-    let coroutine = PeopleContactsBatchDelete::new(&auth, &batch_resource_names)
+    let coroutine = GpeopleContactsBatchDelete::new(&auth, &batch_resource_names)
         .expect("contacts batch delete coroutine");
     client.run(coroutine).expect("contacts batch delete");
 
@@ -317,8 +316,8 @@ fn people() {
 
     client
         .other_contacts_list(
-            &[PeoplePersonField::EmailAddresses],
-            &PeopleOtherContactsListParams::default(),
+            &[GpeoplePersonField::EmailAddresses],
+            &GpeopleOtherContactsListParams::default(),
         )
         .expect("other contacts list");
 

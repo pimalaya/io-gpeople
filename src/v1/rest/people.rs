@@ -33,7 +33,7 @@ pub mod update_contact_photo;
 /// the authenticated user's contacts and profile data.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeoplePerson {
+pub struct GpeoplePerson {
     /// The resource name of the person, assigned by the server.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub resource_name: String,
@@ -43,103 +43,103 @@ pub struct PeoplePerson {
     pub etag: String,
     /// Metadata about the person.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeoplePersonMetadata>,
+    pub metadata: Option<GpeoplePersonMetadata>,
     /// The person's street addresses.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub addresses: Vec<PeopleAddress>,
+    pub addresses: Vec<GpeopleAddress>,
     /// The person's age ranges.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub age_ranges: Vec<PeopleAgeRangeType>,
+    pub age_ranges: Vec<GpeopleAgeRangeType>,
     /// The person's biographies.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub biographies: Vec<PeopleBiography>,
+    pub biographies: Vec<GpeopleBiography>,
     /// The person's birthdays.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub birthdays: Vec<PeopleBirthday>,
+    pub birthdays: Vec<GpeopleBirthday>,
     /// The person's calendar URLs.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub calendar_urls: Vec<PeopleCalendarUrl>,
+    pub calendar_urls: Vec<GpeopleCalendarUrl>,
     /// The person's client data entries.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub client_data: Vec<PeopleClientData>,
+    pub client_data: Vec<GpeopleClientData>,
     /// The person's cover photos.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub cover_photos: Vec<PeopleCoverPhoto>,
+    pub cover_photos: Vec<GpeopleCoverPhoto>,
     /// The person's email addresses.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub email_addresses: Vec<PeopleEmailAddress>,
+    pub email_addresses: Vec<GpeopleEmailAddress>,
     /// The person's events, such as anniversaries.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub events: Vec<PeopleEvent>,
+    pub events: Vec<GpeopleEvent>,
     /// The person's external identifiers.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub external_ids: Vec<PeopleExternalId>,
+    pub external_ids: Vec<GpeopleExternalId>,
     /// The person's file-as names, used for sorting.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub file_ases: Vec<PeopleFileAs>,
+    pub file_ases: Vec<GpeopleFileAs>,
     /// The person's genders.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub genders: Vec<PeopleGender>,
+    pub genders: Vec<GpeopleGender>,
     /// The person's instant messaging clients.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub im_clients: Vec<PeopleImClient>,
+    pub im_clients: Vec<GpeopleImClient>,
     /// The person's interests.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub interests: Vec<PeopleInterest>,
+    pub interests: Vec<GpeopleInterest>,
     /// The person's locale preferences.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub locales: Vec<PeopleLocale>,
+    pub locales: Vec<GpeopleLocale>,
     /// The person's locations.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub locations: Vec<PeopleLocation>,
+    pub locations: Vec<GpeopleLocation>,
     /// The person's group memberships.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub memberships: Vec<PeopleMembership>,
+    pub memberships: Vec<GpeopleMembership>,
     /// The person's miscellaneous keywords.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub misc_keywords: Vec<PeopleMiscKeyword>,
+    pub misc_keywords: Vec<GpeopleMiscKeyword>,
     /// The person's names.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub names: Vec<PeopleName>,
+    pub names: Vec<GpeopleName>,
     /// The person's nicknames.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub nicknames: Vec<PeopleNickname>,
+    pub nicknames: Vec<GpeopleNickname>,
     /// The person's occupations.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub occupations: Vec<PeopleOccupation>,
+    pub occupations: Vec<GpeopleOccupation>,
     /// The person's past or current organizations.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub organizations: Vec<PeopleOrganization>,
+    pub organizations: Vec<GpeopleOrganization>,
     /// The person's phone numbers.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub phone_numbers: Vec<PeoplePhoneNumber>,
+    pub phone_numbers: Vec<GpeoplePhoneNumber>,
     /// The person's photos.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub photos: Vec<PeoplePhoto>,
+    pub photos: Vec<GpeoplePhoto>,
     /// The person's relations to other people.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub relations: Vec<PeopleRelation>,
+    pub relations: Vec<GpeopleRelation>,
     /// The person's SIP addresses, used for VoIP calls.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub sip_addresses: Vec<PeopleSipAddress>,
+    pub sip_addresses: Vec<GpeopleSipAddress>,
     /// The person's skills.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub skills: Vec<PeopleSkill>,
+    pub skills: Vec<GpeopleSkill>,
     /// The person's associated URLs.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub urls: Vec<PeopleUrl>,
+    pub urls: Vec<GpeopleUrl>,
     /// The person's user-defined data entries.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub user_defined: Vec<PeopleUserDefined>,
+    pub user_defined: Vec<GpeopleUserDefined>,
 }
 
 /// Metadata about a person.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeoplePersonMetadata {
+pub struct GpeoplePersonMetadata {
     /// The sources of data for the person.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub sources: Vec<PeopleSource>,
+    pub sources: Vec<GpeopleSource>,
     /// Any former resource names this person had.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub previous_resource_names: Vec<String>,
@@ -151,16 +151,16 @@ pub struct PeoplePersonMetadata {
     pub deleted: Option<bool>,
     /// The type of the person object.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub object_type: Option<PeopleObjectType>,
+    pub object_type: Option<GpeopleObjectType>,
 }
 
 /// Source of a person field.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleSource {
+pub struct GpeopleSource {
     /// The source type (wire field: `type`).
     #[serde(default, rename = "type", skip_serializing_if = "Option::is_none")]
-    pub source_type: Option<PeopleSourceType>,
+    pub source_type: Option<GpeopleSourceType>,
     /// The unique identifier of the source within its type.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub id: String,
@@ -173,13 +173,13 @@ pub struct PeopleSource {
     /// Metadata about the profile source; only set when the source
     /// type is `Profile`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub profile_metadata: Option<PeopleProfileMetadata>,
+    pub profile_metadata: Option<GpeopleProfileMetadata>,
 }
 
 /// Type of a person field source.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum PeopleSourceType {
+pub enum GpeopleSourceType {
     /// Unspecified source type.
     SourceTypeUnspecified,
     /// Google Account.
@@ -199,10 +199,10 @@ pub enum PeopleSourceType {
 /// Metadata about a profile.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleProfileMetadata {
+pub struct GpeopleProfileMetadata {
     /// The type of the profile object.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub object_type: Option<PeopleObjectType>,
+    pub object_type: Option<GpeopleObjectType>,
     /// The user types of the profile.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub user_types: Vec<String>,
@@ -211,7 +211,7 @@ pub struct PeopleProfileMetadata {
 /// Type of a person object: person or (Currents) page.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum PeopleObjectType {
+pub enum GpeopleObjectType {
     /// Unspecified object type.
     ObjectTypeUnspecified,
     /// Person object.
@@ -223,7 +223,7 @@ pub enum PeopleObjectType {
 /// Metadata about a person field: its source and primary/verified flags.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleFieldMetadata {
+pub struct GpeopleFieldMetadata {
     /// Whether the field is the primary field across all sources.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub primary: Option<bool>,
@@ -236,13 +236,13 @@ pub struct PeopleFieldMetadata {
     pub verified: Option<bool>,
     /// The source of the field.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub source: Option<PeopleSource>,
+    pub source: Option<GpeopleSource>,
 }
 
 /// Whole or partial calendar date, such as a birthday.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleDate {
+pub struct GpeopleDate {
     /// The year of the date; 0 means the year is unspecified.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub year: Option<i32>,
@@ -257,10 +257,10 @@ pub struct PeopleDate {
 /// Person's physical address.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleAddress {
+pub struct GpeopleAddress {
     /// Metadata about the address.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The type of the address (wire field: `type`), e.g. `home` or
     /// `work`.
     #[serde(default, rename = "type", skip_serializing_if = "Option::is_none")]
@@ -300,19 +300,19 @@ pub struct PeopleAddress {
 /// Person's age range.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleAgeRangeType {
+pub struct GpeopleAgeRangeType {
     /// Metadata about the age range.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The age range of the person.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub age_range: Option<PeopleAgeRange>,
+    pub age_range: Option<GpeopleAgeRange>,
 }
 
 /// Age range bucket of a person.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum PeopleAgeRange {
+pub enum GpeopleAgeRange {
     /// Unspecified age range.
     AgeRangeUnspecified,
     /// Younger than 18 years.
@@ -326,22 +326,22 @@ pub enum PeopleAgeRange {
 /// Person's short biography.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleBiography {
+pub struct GpeopleBiography {
     /// Metadata about the biography.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The short biography text.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
     /// The content type of the biography.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub content_type: Option<PeopleContentType>,
+    pub content_type: Option<GpeopleContentType>,
 }
 
 /// Content type of a biography.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum PeopleContentType {
+pub enum GpeopleContentType {
     /// Unspecified content type.
     ContentTypeUnspecified,
     /// Plain text content.
@@ -353,13 +353,13 @@ pub enum PeopleContentType {
 /// Person's birthday, as a structured date and/or free-form text.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleBirthday {
+pub struct GpeopleBirthday {
     /// Metadata about the birthday.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The structured date of the birthday.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub date: Option<PeopleDate>,
+    pub date: Option<GpeopleDate>,
     /// The free-form birthday text, used when a structured date
     /// cannot represent it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -369,10 +369,10 @@ pub struct PeopleBirthday {
 /// Person's calendar URL.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleCalendarUrl {
+pub struct GpeopleCalendarUrl {
     /// Metadata about the calendar URL.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The calendar URL.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
@@ -388,10 +388,10 @@ pub struct PeopleCalendarUrl {
 /// Arbitrary client data attached to a person.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleClientData {
+pub struct GpeopleClientData {
     /// Metadata about the client data entry.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The client-specified key of the data entry.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub key: Option<String>,
@@ -403,10 +403,10 @@ pub struct PeopleClientData {
 /// Person's cover photo.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleCoverPhoto {
+pub struct GpeopleCoverPhoto {
     /// Metadata about the cover photo.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The URL of the cover photo.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
@@ -418,10 +418,10 @@ pub struct PeopleCoverPhoto {
 /// Person's email address.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleEmailAddress {
+pub struct GpeopleEmailAddress {
     /// Metadata about the email address.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The email address.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
@@ -440,13 +440,13 @@ pub struct PeopleEmailAddress {
 /// Event related to the person, such as an anniversary.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleEvent {
+pub struct GpeopleEvent {
     /// Metadata about the event.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The date of the event.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub date: Option<PeopleDate>,
+    pub date: Option<GpeopleDate>,
     /// The type of the event (wire field: `type`), e.g.
     /// `anniversary`.
     #[serde(default, rename = "type", skip_serializing_if = "Option::is_none")]
@@ -459,10 +459,10 @@ pub struct PeopleEvent {
 /// Identifier from an external entity related to the person.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleExternalId {
+pub struct GpeopleExternalId {
     /// Metadata about the external identifier.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The value of the external identifier.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
@@ -478,10 +478,10 @@ pub struct PeopleExternalId {
 /// Name that should be used to sort the person in a list.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleFileAs {
+pub struct GpeopleFileAs {
     /// Metadata about the file-as name.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The name that should be used to sort the person in a list.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
@@ -490,10 +490,10 @@ pub struct PeopleFileAs {
 /// Person's gender.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleGender {
+pub struct GpeopleGender {
     /// Metadata about the gender.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The gender value, e.g. `male`, `female`, or `unspecified`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
@@ -509,10 +509,10 @@ pub struct PeopleGender {
 /// Person's instant messaging client.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleImClient {
+pub struct GpeopleImClient {
     /// Metadata about the IM client.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The username used in the IM client.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub username: Option<String>,
@@ -534,10 +534,10 @@ pub struct PeopleImClient {
 /// One of the person's interests.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleInterest {
+pub struct GpeopleInterest {
     /// Metadata about the interest.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The interest value.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
@@ -546,10 +546,10 @@ pub struct PeopleInterest {
 /// Person's locale preference, as an IETF BCP 47 language tag.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleLocale {
+pub struct GpeopleLocale {
     /// Metadata about the locale preference.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The IETF BCP 47 language tag representing the locale
     /// preference.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -559,10 +559,10 @@ pub struct PeopleLocale {
 /// Person's location.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleLocation {
+pub struct GpeopleLocation {
     /// Metadata about the location.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The free-form location value.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
@@ -590,22 +590,22 @@ pub struct PeopleLocation {
 /// Person's membership in a group.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleMembership {
+pub struct GpeopleMembership {
     /// Metadata about the membership.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The contact group membership.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub contact_group_membership: Option<PeopleContactGroupMembership>,
+    pub contact_group_membership: Option<GpeopleContactGroupMembership>,
     /// The Google Workspace domain membership.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub domain_membership: Option<PeopleDomainMembership>,
+    pub domain_membership: Option<GpeopleDomainMembership>,
 }
 
 /// Contact group membership of a person.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleContactGroupMembership {
+pub struct GpeopleContactGroupMembership {
     /// The read-only ID of the contact group.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub contact_group_id: Option<String>,
@@ -617,7 +617,7 @@ pub struct PeopleContactGroupMembership {
 /// Google Workspace domain membership of a person.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleDomainMembership {
+pub struct GpeopleDomainMembership {
     /// Whether the person is in the viewer's Google Workspace domain.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub in_viewer_domain: Option<bool>,
@@ -626,16 +626,16 @@ pub struct PeopleDomainMembership {
 /// Person's miscellaneous keyword.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleMiscKeyword {
+pub struct GpeopleMiscKeyword {
     /// Metadata about the miscellaneous keyword.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The value of the miscellaneous keyword.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
     /// The type of the miscellaneous keyword (wire field: `type`).
     #[serde(default, rename = "type", skip_serializing_if = "Option::is_none")]
-    pub keyword_type: Option<PeopleMiscKeywordType>,
+    pub keyword_type: Option<GpeopleMiscKeywordType>,
     /// The read-only type formatted for display.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub formatted_type: Option<String>,
@@ -644,7 +644,7 @@ pub struct PeopleMiscKeyword {
 /// Type of a miscellaneous keyword.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum PeopleMiscKeywordType {
+pub enum GpeopleMiscKeywordType {
     /// Unspecified keyword type.
     TypeUnspecified,
     /// Outlook billing information field.
@@ -674,10 +674,10 @@ pub enum PeopleMiscKeywordType {
 /// Person's name.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleName {
+pub struct GpeopleName {
     /// Metadata about the name.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The free-form full name value provided by the user.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub unstructured_name: Option<String>,
@@ -727,22 +727,22 @@ pub struct PeopleName {
 /// Person's nickname.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleNickname {
+pub struct GpeopleNickname {
     /// Metadata about the nickname.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The nickname value.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
     /// The type of the nickname (wire field: `type`).
     #[serde(default, rename = "type", skip_serializing_if = "Option::is_none")]
-    pub nickname_type: Option<PeopleNicknameType>,
+    pub nickname_type: Option<GpeopleNicknameType>,
 }
 
 /// Type of a nickname.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum PeopleNicknameType {
+pub enum GpeopleNicknameType {
     /// Generic nickname.
     Default,
     /// Maiden name (name before marriage).
@@ -762,10 +762,10 @@ pub enum PeopleNicknameType {
 /// Person's occupation.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleOccupation {
+pub struct GpeopleOccupation {
     /// Metadata about the occupation.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The occupation value.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
@@ -774,10 +774,10 @@ pub struct PeopleOccupation {
 /// Person's past or current organization.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleOrganization {
+pub struct GpeopleOrganization {
     /// Metadata about the organization.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The type of the organization (wire field: `type`), e.g.
     /// `work` or `school`.
     #[serde(default, rename = "type", skip_serializing_if = "Option::is_none")]
@@ -787,10 +787,10 @@ pub struct PeopleOrganization {
     pub formatted_type: Option<String>,
     /// The start date at which the person joined the organization.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub start_date: Option<PeopleDate>,
+    pub start_date: Option<GpeopleDate>,
     /// The end date at which the person left the organization.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub end_date: Option<PeopleDate>,
+    pub end_date: Option<GpeopleDate>,
     /// Whether the organization is the person's current organization.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub current: Option<bool>,
@@ -830,10 +830,10 @@ pub struct PeopleOrganization {
 /// Person's phone number.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeoplePhoneNumber {
+pub struct GpeoplePhoneNumber {
     /// Metadata about the phone number.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The phone number.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
@@ -853,10 +853,10 @@ pub struct PeoplePhoneNumber {
 /// Person's photo.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeoplePhoto {
+pub struct GpeoplePhoto {
     /// Metadata about the photo.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The URL of the photo.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
@@ -868,10 +868,10 @@ pub struct PeoplePhoto {
 /// Person's relation to another person.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleRelation {
+pub struct GpeopleRelation {
     /// Metadata about the relation.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The name of the related person.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub person: Option<String>,
@@ -887,10 +887,10 @@ pub struct PeopleRelation {
 /// Person's SIP address, for VoIP calls.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleSipAddress {
+pub struct GpeopleSipAddress {
     /// Metadata about the SIP address.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The SIP address in the RFC 3261 URI form.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
@@ -906,10 +906,10 @@ pub struct PeopleSipAddress {
 /// Skill that the person has.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleSkill {
+pub struct GpeopleSkill {
     /// Metadata about the skill.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The skill value.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
@@ -918,10 +918,10 @@ pub struct PeopleSkill {
 /// Person's associated URL.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleUrl {
+pub struct GpeopleUrl {
     /// Metadata about the URL.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The URL value.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
@@ -937,10 +937,10 @@ pub struct PeopleUrl {
 /// Arbitrary user data attached to a person.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleUserDefined {
+pub struct GpeopleUserDefined {
     /// Metadata about the user-defined data entry.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleFieldMetadata>,
+    pub metadata: Option<GpeopleFieldMetadata>,
     /// The user-specified key of the data entry.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub key: Option<String>,
@@ -952,10 +952,10 @@ pub struct PeopleUserDefined {
 /// Response for a single requested person in a batch method.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeoplePersonResponse {
+pub struct GpeoplePersonResponse {
     /// The person the request was for, if there are no errors.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub person: Option<PeoplePerson>,
+    pub person: Option<GpeoplePerson>,
     /// The original requested resource name.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub requested_resource_name: Option<String>,
@@ -965,13 +965,13 @@ pub struct PeoplePersonResponse {
     /// The status of the response for this person, populated only on
     /// error.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub status: Option<PeopleStatus>,
+    pub status: Option<GpeopleStatus>,
 }
 
 /// Logical error model of a failed item in a batch method.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleStatus {
+pub struct GpeopleStatus {
     /// The Google API canonical error code.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub code: Option<i32>,
@@ -987,25 +987,25 @@ pub struct PeopleStatus {
 /// `otherContacts.search`.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleSearchResponse {
+pub struct GpeopleSearchResponse {
     /// The search results.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub results: Vec<PeopleSearchResult>,
+    pub results: Vec<GpeopleSearchResult>,
 }
 
 /// Single result of a search query.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleSearchResult {
+pub struct GpeopleSearchResult {
     /// The person matching the search query.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub person: Option<PeoplePerson>,
+    pub person: Option<GpeoplePerson>,
 }
 
 /// Person field selectable in a `personFields`/`readMask` field mask.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub enum PeoplePersonField {
+pub enum GpeoplePersonField {
     /// Street addresses.
     Addresses,
     /// Age ranges.
@@ -1069,7 +1069,7 @@ pub enum PeoplePersonField {
 /// Source type selectable in a `sources` query parameter.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum PeopleReadSourceType {
+pub enum GpeopleReadSourceType {
     /// Returns the authenticated user's profile data from Google
     /// profile.
     ReadSourceTypeProfile,
@@ -1084,7 +1084,7 @@ pub enum PeopleReadSourceType {
 /// Order in which connections are sorted (`people.connections.list`).
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum PeopleSortOrder {
+pub enum GpeopleSortOrder {
     /// Sort by last modified time, oldest first.
     LastModifiedAscending,
     /// Sort by last modified time, newest first.
@@ -1098,7 +1098,7 @@ pub enum PeopleSortOrder {
 /// Directory source selectable in the directory methods.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum PeopleDirectorySourceType {
+pub enum GpeopleDirectorySourceType {
     /// Google Workspace domain-shared contacts.
     DirectorySourceTypeDomainContact,
     /// Google Workspace domain profiles.
@@ -1108,7 +1108,7 @@ pub enum PeopleDirectorySourceType {
 /// Additional data merged into the directory sources.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum PeopleDirectoryMergeSourceType {
+pub enum GpeopleDirectoryMergeSourceType {
     /// Merge data from the authenticated user's personal contacts.
     DirectoryMergeSourceTypeContact,
 }

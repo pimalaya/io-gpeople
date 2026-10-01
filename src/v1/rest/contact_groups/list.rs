@@ -11,11 +11,11 @@ use url::Url;
 
 use crate::{
     coroutine::*,
-    people_try,
+    gpeople_try,
     v1::{
         query::{to_field_mask, to_query_pairs},
-        rest::contact_groups::{PeopleContactGroup, PeopleGroupField},
-        send::{PEOPLE_API_BASE, PeopleSend, PeopleSendError, PeopleSendOutput},
+        rest::contact_groups::{GpeopleContactGroup, GpeopleGroupField},
+        send::{GPEOPLE_API_BASE, GpeopleSend, GpeopleSendError, GpeopleSendOutput},
     },
 };
 
@@ -23,7 +23,7 @@ use crate::{
 /// (`contactGroups.list`).
 #[derive(Debug, Clone, Default, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleContactGroupsListParams<'a> {
+pub struct GpeopleContactGroupsListParams<'a> {
     /// Maximum number of groups to return per page (server default: 30,
     /// max: 1000).
     pub page_size: Option<u32>,
@@ -36,10 +36,10 @@ pub struct PeopleContactGroupsListParams<'a> {
 /// People REST contact groups listing response (one page of groups).
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleContactGroupsListResponse {
+pub struct GpeopleContactGroupsListResponse {
     /// Contact groups returned for this page of results.
     #[serde(default)]
-    pub contact_groups: Vec<PeopleContactGroup>,
+    pub contact_groups: Vec<GpeopleContactGroup>,
     /// Token to pass as `page_token` to retrieve the next page.
     #[serde(default)]
     pub next_page_token: Option<String>,
@@ -52,23 +52,23 @@ pub struct PeopleContactGroupsListResponse {
 }
 
 /// People REST contact groups listing, wrapping a page of groups.
-pub struct PeopleContactGroupsList {
-    send: PeopleSend<PeopleContactGroupsListResponse>,
+pub struct GpeopleContactGroupsList {
+    send: GpeopleSend<GpeopleContactGroupsListResponse>,
 }
 
-impl PeopleContactGroupsList {
+impl GpeopleContactGroupsList {
     /// Build a contact-groups listing coroutine for the given field mask
     /// and optional pagination/sync parameters.
     pub fn new(
         auth: &HttpAuthBearer,
-        group_fields: &[PeopleGroupField],
-        params: &PeopleContactGroupsListParams,
-    ) -> Result<Self, PeopleSendError> {
+        group_fields: &[GpeopleGroupField],
+        params: &GpeopleContactGroupsListParams,
+    ) -> Result<Self, GpeopleSendError> {
         debug!("prepare people contact groups listing");
         trace!("group_fields: {group_fields:?}");
         trace!("params: {params:?}");
 
-        let mut url = Url::parse(PEOPLE_API_BASE)?.join("contactGroups")?;
+        let mut url = Url::parse(GPEOPLE_API_BASE)?.join("contactGroups")?;
 
         {
             let mut pairs = url.query_pairs_mut();
@@ -78,20 +78,20 @@ impl PeopleContactGroupsList {
             pairs.extend_pairs(to_query_pairs(params));
         }
 
-        let send = PeopleSend::get(auth, url);
+        let send = GpeopleSend::get(auth, url);
 
         Ok(Self { send })
     }
 }
 
-impl PeopleCoroutine for PeopleContactGroupsList {
-    type Yield = PeopleYield;
-    type Return = Result<PeopleSendOutput<PeopleContactGroupsListResponse>, PeopleSendError>;
+impl GpeopleCoroutine for GpeopleContactGroupsList {
+    type Yield = GpeopleYield;
+    type Return = Result<GpeopleSendOutput<GpeopleContactGroupsListResponse>, GpeopleSendError>;
 
-    fn resume(&mut self, arg: Option<&[u8]>) -> PeopleCoroutineState<Self::Yield, Self::Return> {
-        let out = people_try!(&mut self.send, arg);
+    fn resume(&mut self, arg: Option<&[u8]>) -> GpeopleCoroutineState<Self::Yield, Self::Return> {
+        let out = gpeople_try!(&mut self.send, arg);
         debug!("people contact groups listed");
         trace!("out: {out:?}");
-        PeopleCoroutineState::Complete(Ok(out))
+        GpeopleCoroutineState::Complete(Ok(out))
     }
 }

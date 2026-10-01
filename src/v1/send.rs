@@ -26,17 +26,17 @@ use serde::{Deserialize, Deserializer, Serialize, de::DeserializeOwned};
 use thiserror::Error;
 use url::Url;
 
-use crate::coroutine::{PeopleCoroutine, PeopleCoroutineState, PeopleYield};
+use crate::coroutine::{GpeopleCoroutine, GpeopleCoroutineState, GpeopleYield};
 
 /// Base URL for the Google People API v1.
-pub const PEOPLE_API_BASE: &str = "https://people.googleapis.com/v1/";
+pub const GPEOPLE_API_BASE: &str = "https://people.googleapis.com/v1/";
 
 /// Placeholder response type for People API operations that return no body
 /// (e.g. DELETE).
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq)]
-pub struct PeopleNoResponse;
+pub struct GpeopleNoResponse;
 
-impl<'de> Deserialize<'de> for PeopleNoResponse {
+impl<'de> Deserialize<'de> for GpeopleNoResponse {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
@@ -48,7 +48,7 @@ impl<'de> Deserialize<'de> for PeopleNoResponse {
 
 /// Errors that can occur while sending a People API HTTP request.
 #[derive(Debug, Error)]
-pub enum PeopleSendError {
+pub enum GpeopleSendError {
     /// The underlying HTTP/1.1 send coroutine failed.
     #[error("People HTTP request failed: {0}")]
     Send(#[from] Http11SendError),
@@ -77,8 +77,8 @@ pub enum PeopleSendError {
     UnexpectedRedirect,
 }
 
-impl PeopleSendError {
-    /// Return the HTTP status code if this is an [`PeopleSendError::Api`]
+impl GpeopleSendError {
+    /// Return the HTTP status code if this is an [`GpeopleSendError::Api`]
     /// error, otherwise `None`.
     pub fn status(&self) -> Option<u16> {
         match self {
@@ -94,9 +94,9 @@ impl PeopleSendError {
     }
 }
 
-/// Successful output from a [`PeopleSend`] coroutine.
+/// Successful output from a [`GpeopleSend`] coroutine.
 #[derive(Clone, Debug)]
-pub struct PeopleSendOutput<T> {
+pub struct GpeopleSendOutput<T> {
     /// The deserialized API response body.
     pub response: T,
     /// Whether the server indicated the connection can be reused.
@@ -105,12 +105,12 @@ pub struct PeopleSendOutput<T> {
 
 /// I/O-free coroutine that sends one HTTP request to the People API and
 /// deserializes the JSON response into `T`.
-pub struct PeopleSend<T> {
+pub struct GpeopleSend<T> {
     state: State,
     _phantom: PhantomData<T>,
 }
 
-impl<T: DeserializeOwned> PeopleSend<T> {
+impl<T: DeserializeOwned> GpeopleSend<T> {
     /// Build a `GET` request coroutine for the given URL.
     pub fn get(auth: &HttpAuthBearer, url: Url) -> Self {
         Self::with_method(auth, "GET", url, None, Vec::new())
@@ -126,8 +126,8 @@ impl<T: DeserializeOwned> PeopleSend<T> {
         auth: &HttpAuthBearer,
         url: Url,
         body: &B,
-    ) -> Result<Self, PeopleSendError> {
-        let body = serde_json::to_vec(body).map_err(PeopleSendError::SerializeRequest)?;
+    ) -> Result<Self, GpeopleSendError> {
+        let body = serde_json::to_vec(body).map_err(GpeopleSendError::SerializeRequest)?;
         Ok(Self::with_method(
             auth,
             "POST",
@@ -142,8 +142,8 @@ impl<T: DeserializeOwned> PeopleSend<T> {
         auth: &HttpAuthBearer,
         url: Url,
         body: &B,
-    ) -> Result<Self, PeopleSendError> {
-        let body = serde_json::to_vec(body).map_err(PeopleSendError::SerializeRequest)?;
+    ) -> Result<Self, GpeopleSendError> {
+        let body = serde_json::to_vec(body).map_err(GpeopleSendError::SerializeRequest)?;
         Ok(Self::with_method(
             auth,
             "PUT",
@@ -158,8 +158,8 @@ impl<T: DeserializeOwned> PeopleSend<T> {
         auth: &HttpAuthBearer,
         url: Url,
         body: &B,
-    ) -> Result<Self, PeopleSendError> {
-        let body = serde_json::to_vec(body).map_err(PeopleSendError::SerializeRequest)?;
+    ) -> Result<Self, GpeopleSendError> {
+        let body = serde_json::to_vec(body).map_err(GpeopleSendError::SerializeRequest)?;
         Ok(Self::with_method(
             auth,
             "PATCH",
@@ -201,25 +201,25 @@ impl<T: DeserializeOwned> PeopleSend<T> {
     }
 }
 
-impl<T: DeserializeOwned> PeopleCoroutine for PeopleSend<T> {
-    type Yield = PeopleYield;
-    type Return = Result<PeopleSendOutput<T>, PeopleSendError>;
+impl<T: DeserializeOwned> GpeopleCoroutine for GpeopleSend<T> {
+    type Yield = GpeopleYield;
+    type Return = Result<GpeopleSendOutput<T>, GpeopleSendError>;
 
-    fn resume(&mut self, arg: Option<&[u8]>) -> PeopleCoroutineState<Self::Yield, Self::Return> {
+    fn resume(&mut self, arg: Option<&[u8]>) -> GpeopleCoroutineState<Self::Yield, Self::Return> {
         trace!("send: {}", self.state);
         match &mut self.state {
             State::Send(send) => match send.resume(arg) {
                 HttpCoroutineState::Yielded(HttpSendYield::WantsRead) => {
-                    PeopleCoroutineState::Yielded(PeopleYield::WantsRead)
+                    GpeopleCoroutineState::Yielded(GpeopleYield::WantsRead)
                 }
                 HttpCoroutineState::Yielded(HttpSendYield::WantsWrite(bytes)) => {
-                    PeopleCoroutineState::Yielded(PeopleYield::WantsWrite(bytes))
+                    GpeopleCoroutineState::Yielded(GpeopleYield::WantsWrite(bytes))
                 }
                 HttpCoroutineState::Yielded(HttpSendYield::WantsRedirect { .. }) => {
-                    PeopleCoroutineState::Complete(Err(PeopleSendError::UnexpectedRedirect))
+                    GpeopleCoroutineState::Complete(Err(GpeopleSendError::UnexpectedRedirect))
                 }
                 HttpCoroutineState::Complete(Err(err)) => {
-                    PeopleCoroutineState::Complete(Err(err.into()))
+                    GpeopleCoroutineState::Complete(Err(err.into()))
                 }
                 HttpCoroutineState::Complete(Ok(HttpSendOutput {
                     response,
@@ -234,17 +234,19 @@ impl<T: DeserializeOwned> PeopleCoroutine for PeopleSend<T> {
                         };
 
                         match serde_json::from_slice::<T>(body) {
-                            Ok(response) => PeopleCoroutineState::Complete(Ok(PeopleSendOutput {
-                                response,
-                                keep_alive,
-                            })),
-                            Err(err) => PeopleCoroutineState::Complete(Err(
-                                PeopleSendError::ParseResponse(err),
+                            Ok(response) => {
+                                GpeopleCoroutineState::Complete(Ok(GpeopleSendOutput {
+                                    response,
+                                    keep_alive,
+                                }))
+                            }
+                            Err(err) => GpeopleCoroutineState::Complete(Err(
+                                GpeopleSendError::ParseResponse(err),
                             )),
                         }
                     } else {
                         let (status, message) = parse_api_error(*response.status, &response.body);
-                        PeopleCoroutineState::Complete(Err(PeopleSendError::Api {
+                        GpeopleCoroutineState::Complete(Err(GpeopleSendError::Api {
                             status,
                             message,
                         }))

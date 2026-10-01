@@ -11,11 +11,11 @@ use url::Url;
 
 use crate::{
     coroutine::*,
-    people_try,
+    gpeople_try,
     v1::{
         query::{to_field_mask, to_field_pairs},
-        rest::people::{PeoplePerson, PeoplePersonField, PeopleReadSourceType},
-        send::{PEOPLE_API_BASE, PeopleSend, PeopleSendError, PeopleSendOutput},
+        rest::people::{GpeoplePerson, GpeoplePersonField, GpeopleReadSourceType},
+        send::{GPEOPLE_API_BASE, GpeopleSend, GpeopleSendError, GpeopleSendOutput},
     },
 };
 
@@ -23,19 +23,19 @@ use crate::{
 /// mutation, when a person fields mask was given).
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleContactPhotoDeleteResponse {
+pub struct GpeopleContactPhotoDeleteResponse {
     /// The person after photo removal, populated when `person_fields` was
     /// given.
     #[serde(default)]
-    pub person: Option<PeoplePerson>,
+    pub person: Option<GpeoplePerson>,
 }
 
 /// People REST contact photo deletion, by full resource name.
-pub struct PeopleContactPhotoDelete {
-    send: PeopleSend<PeopleContactPhotoDeleteResponse>,
+pub struct GpeopleContactPhotoDelete {
+    send: GpeopleSend<GpeopleContactPhotoDeleteResponse>,
 }
 
-impl PeopleContactPhotoDelete {
+impl GpeopleContactPhotoDelete {
     /// Build a new contact photo deletion coroutine.
     ///
     /// `person_fields` is optional; when non-empty the response includes the
@@ -43,9 +43,9 @@ impl PeopleContactPhotoDelete {
     pub fn new(
         auth: &HttpAuthBearer,
         resource_name: &str,
-        person_fields: &[PeoplePersonField],
-        sources: &[PeopleReadSourceType],
-    ) -> Result<Self, PeopleSendError> {
+        person_fields: &[GpeoplePersonField],
+        sources: &[GpeopleReadSourceType],
+    ) -> Result<Self, GpeopleSendError> {
         debug!("prepare people contact photo for deletion");
         trace!("resource_name: {resource_name:?}");
         trace!("person_fields: {person_fields:?}");
@@ -53,12 +53,12 @@ impl PeopleContactPhotoDelete {
 
         if resource_name.trim().is_empty() {
             let err =
-                PeopleSendError::InvalidRequest("Person resource name cannot be empty".into());
+                GpeopleSendError::InvalidRequest("Person resource name cannot be empty".into());
             return Err(err);
         }
 
         let mut url =
-            Url::parse(PEOPLE_API_BASE)?.join(&format!("{resource_name}:deleteContactPhoto"))?;
+            Url::parse(GPEOPLE_API_BASE)?.join(&format!("{resource_name}:deleteContactPhoto"))?;
 
         {
             let mut pairs = url.query_pairs_mut();
@@ -68,20 +68,20 @@ impl PeopleContactPhotoDelete {
             pairs.extend_pairs(to_field_pairs("sources", sources));
         }
 
-        let send = PeopleSend::delete(auth, url);
+        let send = GpeopleSend::delete(auth, url);
 
         Ok(Self { send })
     }
 }
 
-impl PeopleCoroutine for PeopleContactPhotoDelete {
-    type Yield = PeopleYield;
-    type Return = Result<PeopleSendOutput<PeopleContactPhotoDeleteResponse>, PeopleSendError>;
+impl GpeopleCoroutine for GpeopleContactPhotoDelete {
+    type Yield = GpeopleYield;
+    type Return = Result<GpeopleSendOutput<GpeopleContactPhotoDeleteResponse>, GpeopleSendError>;
 
-    fn resume(&mut self, arg: Option<&[u8]>) -> PeopleCoroutineState<Self::Yield, Self::Return> {
-        let out = people_try!(&mut self.send, arg);
+    fn resume(&mut self, arg: Option<&[u8]>) -> GpeopleCoroutineState<Self::Yield, Self::Return> {
+        let out = gpeople_try!(&mut self.send, arg);
         debug!("people contact photo deleted");
         trace!("out: {out:?}");
-        PeopleCoroutineState::Complete(Ok(out))
+        GpeopleCoroutineState::Complete(Ok(out))
     }
 }

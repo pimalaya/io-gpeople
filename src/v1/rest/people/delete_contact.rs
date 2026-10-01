@@ -10,44 +10,46 @@ use url::Url;
 
 use crate::{
     coroutine::*,
-    people_try,
-    v1::send::{PEOPLE_API_BASE, PeopleNoResponse, PeopleSend, PeopleSendError, PeopleSendOutput},
+    gpeople_try,
+    v1::send::{
+        GPEOPLE_API_BASE, GpeopleNoResponse, GpeopleSend, GpeopleSendError, GpeopleSendOutput,
+    },
 };
 
 /// People REST contact deletion, by full resource name.
-pub struct PeopleContactDelete {
-    send: PeopleSend<PeopleNoResponse>,
+pub struct GpeopleContactDelete {
+    send: GpeopleSend<GpeopleNoResponse>,
 }
 
-impl PeopleContactDelete {
+impl GpeopleContactDelete {
     /// Build a new contact deletion coroutine.
     ///
     /// `resource_name` must be non-empty and identify an existing contact.
-    pub fn new(auth: &HttpAuthBearer, resource_name: &str) -> Result<Self, PeopleSendError> {
+    pub fn new(auth: &HttpAuthBearer, resource_name: &str) -> Result<Self, GpeopleSendError> {
         debug!("prepare people contact for deletion");
         trace!("resource_name: {resource_name:?}");
 
         if resource_name.trim().is_empty() {
             let err =
-                PeopleSendError::InvalidRequest("Person resource name cannot be empty".into());
+                GpeopleSendError::InvalidRequest("Person resource name cannot be empty".into());
             return Err(err);
         }
 
-        let url = Url::parse(PEOPLE_API_BASE)?.join(&format!("{resource_name}:deleteContact"))?;
-        let send = PeopleSend::delete(auth, url);
+        let url = Url::parse(GPEOPLE_API_BASE)?.join(&format!("{resource_name}:deleteContact"))?;
+        let send = GpeopleSend::delete(auth, url);
 
         Ok(Self { send })
     }
 }
 
-impl PeopleCoroutine for PeopleContactDelete {
-    type Yield = PeopleYield;
-    type Return = Result<PeopleSendOutput<PeopleNoResponse>, PeopleSendError>;
+impl GpeopleCoroutine for GpeopleContactDelete {
+    type Yield = GpeopleYield;
+    type Return = Result<GpeopleSendOutput<GpeopleNoResponse>, GpeopleSendError>;
 
-    fn resume(&mut self, arg: Option<&[u8]>) -> PeopleCoroutineState<Self::Yield, Self::Return> {
-        let out = people_try!(&mut self.send, arg);
+    fn resume(&mut self, arg: Option<&[u8]>) -> GpeopleCoroutineState<Self::Yield, Self::Return> {
+        let out = gpeople_try!(&mut self.send, arg);
         debug!("people contact deleted");
         trace!("out: {out:?}");
-        PeopleCoroutineState::Complete(Ok(out))
+        GpeopleCoroutineState::Complete(Ok(out))
     }
 }

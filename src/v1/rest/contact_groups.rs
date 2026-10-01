@@ -15,12 +15,12 @@ pub mod list;
 pub mod members;
 pub mod update;
 
-use crate::v1::rest::people::PeopleStatus;
+use crate::v1::rest::people::GpeopleStatus;
 
 /// Contact group owned by the authenticated user.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleContactGroup {
+pub struct GpeopleContactGroup {
     /// Server-assigned identifier, e.g. `contactGroups/123`.
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub resource_name: String,
@@ -29,10 +29,10 @@ pub struct PeopleContactGroup {
     pub etag: String,
     /// Server-managed metadata such as the last update time.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub metadata: Option<PeopleContactGroupMetadata>,
+    pub metadata: Option<GpeopleContactGroupMetadata>,
     /// Whether this is a user-created group or a system group.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub group_type: Option<PeopleContactGroupType>,
+    pub group_type: Option<GpeopleContactGroupType>,
     /// User-defined name of the contact group.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub name: Option<String>,
@@ -47,13 +47,13 @@ pub struct PeopleContactGroup {
     pub member_count: Option<u32>,
     /// Arbitrary key-value pairs stored by the calling application.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
-    pub client_data: Vec<PeopleGroupClientData>,
+    pub client_data: Vec<GpeopleGroupClientData>,
 }
 
 /// Metadata about a contact group.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleContactGroupMetadata {
+pub struct GpeopleContactGroupMetadata {
     /// RFC 3339 timestamp of the most recent modification.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub update_time: Option<String>,
@@ -65,7 +65,7 @@ pub struct PeopleContactGroupMetadata {
 /// Owner of the contact group: created by Google or by the user.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
-pub enum PeopleContactGroupType {
+pub enum GpeopleContactGroupType {
     /// Default value; should not be used.
     GroupTypeUnspecified,
     /// Group created by the authenticated user.
@@ -77,7 +77,7 @@ pub enum PeopleContactGroupType {
 /// Arbitrary client data attached to a contact group.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleGroupClientData {
+pub struct GpeopleGroupClientData {
     /// Application-defined key for this piece of client data.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub key: Option<String>,
@@ -89,22 +89,22 @@ pub struct PeopleGroupClientData {
 /// Response for a single requested contact group in a batch method.
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleContactGroupResponse {
+pub struct GpeopleContactGroupResponse {
     /// The contact group that was requested, if successfully retrieved.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub contact_group: Option<PeopleContactGroup>,
+    pub contact_group: Option<GpeopleContactGroup>,
     /// The resource name originally requested by the caller.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub requested_resource_name: Option<String>,
     /// Error status when this particular group could not be retrieved.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub status: Option<PeopleStatus>,
+    pub status: Option<GpeopleStatus>,
 }
 
 /// Contact group field selectable in a `groupFields` field mask.
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub enum PeopleGroupField {
+pub enum GpeopleGroupField {
     /// Arbitrary key-value data stored by the calling application.
     ClientData,
     /// Whether the group is user-created or a system group.

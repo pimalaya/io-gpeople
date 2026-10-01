@@ -4,27 +4,27 @@ use io_gpeople::v1::{
     query::{to_field_mask, to_query_pairs},
     rest::{
         contact_groups::{
-            PeopleContactGroup, PeopleContactGroupType, PeopleGroupField,
-            create::PeopleContactGroupCreate,
-            delete::PeopleContactGroupDelete,
-            list::{PeopleContactGroupsList, PeopleContactGroupsListParams},
-            members::modify::PeopleContactGroupMembersModify,
+            GpeopleContactGroup, GpeopleContactGroupType, GpeopleGroupField,
+            create::GpeopleContactGroupCreate,
+            delete::GpeopleContactGroupDelete,
+            list::{GpeopleContactGroupsList, GpeopleContactGroupsListParams},
+            members::modify::GpeopleContactGroupMembersModify,
         },
         other_contacts::{
-            copy_other_contact_to_my_contacts_group::PeopleOtherContactCopy,
-            list::{PeopleOtherContactsList, PeopleOtherContactsListParams},
+            copy_other_contact_to_my_contacts_group::GpeopleOtherContactCopy,
+            list::{GpeopleOtherContactsList, GpeopleOtherContactsListParams},
         },
         people::{
-            PeopleName, PeoplePerson, PeoplePersonField, PeopleReadSourceType,
-            connections::list::{PeopleConnectionsList, PeopleConnectionsListParams},
-            create_contact::PeopleContactCreate,
-            delete_contact::PeopleContactDelete,
-            get::PeoplePersonGet,
-            search_contacts::PeopleContactsSearch,
-            update_contact::PeopleContactUpdate,
+            GpeopleName, GpeoplePerson, GpeoplePersonField, GpeopleReadSourceType,
+            connections::list::{GpeopleConnectionsList, GpeopleConnectionsListParams},
+            create_contact::GpeopleContactCreate,
+            delete_contact::GpeopleContactDelete,
+            get::GpeoplePersonGet,
+            search_contacts::GpeopleContactsSearch,
+            update_contact::GpeopleContactUpdate,
         },
     },
-    send::{PeopleSendError, parse_api_error},
+    send::{GpeopleSendError, parse_api_error},
 };
 use io_http::rfc6750::bearer::HttpAuthBearer;
 
@@ -40,13 +40,16 @@ fn lists_connections() {
         "HTTP/1.1 200 OK",
         r#"{"connections":[{"resourceName":"people/c1","names":[{"displayName":"Jane Doe"}]}],"nextSyncToken":"sync-1","totalItems":1}"#,
     );
-    let params = PeopleConnectionsListParams {
+    let params = GpeopleConnectionsListParams {
         request_sync_token: true,
         ..Default::default()
     };
-    let mut coroutine = PeopleConnectionsList::new(
+    let mut coroutine = GpeopleConnectionsList::new(
         &auth(),
-        &[PeoplePersonField::Names, PeoplePersonField::EmailAddresses],
+        &[
+            GpeoplePersonField::Names,
+            GpeoplePersonField::EmailAddresses,
+        ],
         &params,
     )
     .unwrap();
@@ -76,7 +79,7 @@ fn gets_person() {
         r#"{"resourceName":"people/me","etag":"tag-1","names":[{"displayName":"Jane Doe","givenName":"Jane"}]}"#,
     );
     let mut coroutine =
-        PeoplePersonGet::new(&auth(), "people/me", &[PeoplePersonField::Names], &[]).unwrap();
+        GpeoplePersonGet::new(&auth(), "people/me", &[GpeoplePersonField::Names], &[]).unwrap();
     let (ret, written) = run(&mut coroutine, &response);
     let out = ret.unwrap();
 
@@ -92,8 +95,8 @@ fn gets_person() {
 
 #[test]
 fn rejects_empty_person_fields() {
-    let result = PeoplePersonGet::new(&auth(), "people/me", &[], &[]);
-    assert!(matches!(result, Err(PeopleSendError::InvalidRequest(_))));
+    let result = GpeoplePersonGet::new(&auth(), "people/me", &[], &[]);
+    assert!(matches!(result, Err(GpeopleSendError::InvalidRequest(_))));
 }
 
 #[test]
@@ -102,8 +105,8 @@ fn creates_contact() {
         "HTTP/1.1 200 OK",
         r#"{"resourceName":"people/c1","etag":"tag-1","names":[{"givenName":"Jane"}]}"#,
     );
-    let person = PeoplePerson {
-        names: vec![PeopleName {
+    let person = GpeoplePerson {
+        names: vec![GpeopleName {
             given_name: Some("Jane".into()),
             family_name: Some("Doe".into()),
             ..Default::default()
@@ -111,7 +114,7 @@ fn creates_contact() {
         ..Default::default()
     };
     let mut coroutine =
-        PeopleContactCreate::new(&auth(), &person, &[PeoplePersonField::Names], &[]).unwrap();
+        GpeopleContactCreate::new(&auth(), &person, &[GpeoplePersonField::Names], &[]).unwrap();
     let (ret, written) = run(&mut coroutine, &response);
 
     assert_eq!(ret.unwrap().response.resource_name, "people/c1");
@@ -134,17 +137,18 @@ fn updates_contact() {
         "HTTP/1.1 200 OK",
         r#"{"resourceName":"people/c1","etag":"tag-2","names":[{"givenName":"Janet"}]}"#,
     );
-    let person = PeoplePerson {
+    let person = GpeoplePerson {
         resource_name: "people/c1".into(),
         etag: "tag-1".into(),
-        names: vec![PeopleName {
+        names: vec![GpeopleName {
             given_name: Some("Janet".into()),
             ..Default::default()
         }],
         ..Default::default()
     };
     let mut coroutine =
-        PeopleContactUpdate::new(&auth(), &person, &[PeoplePersonField::Names], &[], &[]).unwrap();
+        GpeopleContactUpdate::new(&auth(), &person, &[GpeoplePersonField::Names], &[], &[])
+            .unwrap();
     let (ret, written) = run(&mut coroutine, &response);
 
     assert_eq!(ret.unwrap().response.etag, "tag-2");
@@ -159,15 +163,16 @@ fn updates_contact() {
 
 #[test]
 fn rejects_update_without_resource_name() {
-    let person = PeoplePerson::default();
-    let result = PeopleContactUpdate::new(&auth(), &person, &[PeoplePersonField::Names], &[], &[]);
-    assert!(matches!(result, Err(PeopleSendError::InvalidRequest(_))));
+    let person = GpeoplePerson::default();
+    let result =
+        GpeopleContactUpdate::new(&auth(), &person, &[GpeoplePersonField::Names], &[], &[]);
+    assert!(matches!(result, Err(GpeopleSendError::InvalidRequest(_))));
 }
 
 #[test]
 fn deletes_contact() {
     let response = empty_response("HTTP/1.1 200 OK");
-    let mut coroutine = PeopleContactDelete::new(&auth(), "people/c1").unwrap();
+    let mut coroutine = GpeopleContactDelete::new(&auth(), "people/c1").unwrap();
     let (ret, written) = run(&mut coroutine, &response);
 
     ret.unwrap();
@@ -185,12 +190,12 @@ fn searches_contacts() {
         "HTTP/1.1 200 OK",
         r#"{"results":[{"person":{"resourceName":"people/c1"}}]}"#,
     );
-    let mut coroutine = PeopleContactsSearch::new(
+    let mut coroutine = GpeopleContactsSearch::new(
         &auth(),
         "jane",
-        &[PeoplePersonField::Names],
+        &[GpeoplePersonField::Names],
         Some(10),
-        &[PeopleReadSourceType::ReadSourceTypeContact],
+        &[GpeopleReadSourceType::ReadSourceTypeContact],
     )
     .unwrap();
     let (ret, written) = run(&mut coroutine, &response);
@@ -216,7 +221,7 @@ fn lists_contact_groups() {
         r#"{"contactGroups":[{"resourceName":"contactGroups/myContacts","groupType":"SYSTEM_CONTACT_GROUP","name":"myContacts"}],"totalItems":1}"#,
     );
     let mut coroutine =
-        PeopleContactGroupsList::new(&auth(), &[], &PeopleContactGroupsListParams::default())
+        GpeopleContactGroupsList::new(&auth(), &[], &GpeopleContactGroupsListParams::default())
             .unwrap();
     let (ret, _) = run(&mut coroutine, &response);
     let out = ret.unwrap();
@@ -224,7 +229,7 @@ fn lists_contact_groups() {
     assert_eq!(out.response.contact_groups.len(), 1);
     assert_eq!(
         out.response.contact_groups[0].group_type,
-        Some(PeopleContactGroupType::SystemContactGroup)
+        Some(GpeopleContactGroupType::SystemContactGroup)
     );
 }
 
@@ -234,12 +239,12 @@ fn creates_contact_group() {
         "HTTP/1.1 200 OK",
         r#"{"resourceName":"contactGroups/abc","etag":"tag-1","name":"todo"}"#,
     );
-    let group = PeopleContactGroup {
+    let group = GpeopleContactGroup {
         name: Some("todo".into()),
         ..Default::default()
     };
     let mut coroutine =
-        PeopleContactGroupCreate::new(&auth(), &group, &[PeopleGroupField::Name]).unwrap();
+        GpeopleContactGroupCreate::new(&auth(), &group, &[GpeopleGroupField::Name]).unwrap();
     let (ret, written) = run(&mut coroutine, &response);
 
     assert_eq!(ret.unwrap().response.resource_name, "contactGroups/abc");
@@ -261,18 +266,18 @@ fn creates_contact_group() {
 
 #[test]
 fn rejects_empty_group_name() {
-    let group = PeopleContactGroup {
+    let group = GpeopleContactGroup {
         name: Some("  ".into()),
         ..Default::default()
     };
-    let result = PeopleContactGroupCreate::new(&auth(), &group, &[]);
-    assert!(matches!(result, Err(PeopleSendError::InvalidRequest(_))));
+    let result = GpeopleContactGroupCreate::new(&auth(), &group, &[]);
+    assert!(matches!(result, Err(GpeopleSendError::InvalidRequest(_))));
 }
 
 #[test]
 fn deletes_contact_group_with_contacts() {
     let response = empty_response("HTTP/1.1 200 OK");
-    let mut coroutine = PeopleContactGroupDelete::new(&auth(), "contactGroups/abc", true).unwrap();
+    let mut coroutine = GpeopleContactGroupDelete::new(&auth(), "contactGroups/abc", true).unwrap();
     let (ret, written) = run(&mut coroutine, &response);
 
     ret.unwrap();
@@ -287,7 +292,7 @@ fn deletes_contact_group_with_contacts() {
 #[test]
 fn modifies_contact_group_members() {
     let response = json_response("HTTP/1.1 200 OK", r#"{"notFoundResourceNames":[]}"#);
-    let mut coroutine = PeopleContactGroupMembersModify::new(
+    let mut coroutine = GpeopleContactGroupMembersModify::new(
         &auth(),
         "contactGroups/abc",
         &["people/c1".to_string()],
@@ -319,10 +324,10 @@ fn lists_other_contacts() {
         "HTTP/1.1 200 OK",
         r#"{"otherContacts":[{"resourceName":"otherContacts/o1","emailAddresses":[{"value":"jane@example.com"}]}],"nextSyncToken":"sync-1"}"#,
     );
-    let mut coroutine = PeopleOtherContactsList::new(
+    let mut coroutine = GpeopleOtherContactsList::new(
         &auth(),
-        &[PeoplePersonField::EmailAddresses],
-        &PeopleOtherContactsListParams {
+        &[GpeoplePersonField::EmailAddresses],
+        &GpeopleOtherContactsListParams {
             request_sync_token: true,
             ..Default::default()
         },
@@ -352,10 +357,13 @@ fn copies_other_contact() {
         "HTTP/1.1 200 OK",
         r#"{"resourceName":"people/c9","etag":"tag-1"}"#,
     );
-    let mut coroutine = PeopleOtherContactCopy::new(
+    let mut coroutine = GpeopleOtherContactCopy::new(
         &auth(),
         "otherContacts/o1",
-        &[PeoplePersonField::Names, PeoplePersonField::EmailAddresses],
+        &[
+            GpeoplePersonField::Names,
+            GpeoplePersonField::EmailAddresses,
+        ],
         &[],
         &[],
     )
@@ -381,16 +389,16 @@ fn surfaces_api_errors() {
         "HTTP/1.1 403 Forbidden",
         r#"{"error":{"code":403,"message":"insufficient permissions"}}"#,
     );
-    let mut coroutine = PeopleConnectionsList::new(
+    let mut coroutine = GpeopleConnectionsList::new(
         &auth(),
-        &[PeoplePersonField::Names],
-        &PeopleConnectionsListParams::default(),
+        &[GpeoplePersonField::Names],
+        &GpeopleConnectionsListParams::default(),
     )
     .unwrap();
     let (ret, _) = run(&mut coroutine, &response);
 
     match ret.unwrap_err() {
-        PeopleSendError::Api { status, message } => {
+        GpeopleSendError::Api { status, message } => {
             assert_eq!(status, 403);
             assert_eq!(message, "insufficient permissions");
         }
@@ -440,23 +448,26 @@ fn summarizes_an_html_error_body() {
 #[test]
 fn joins_field_masks() {
     assert_eq!(
-        to_field_mask(&[PeoplePersonField::Names, PeoplePersonField::EmailAddresses]),
+        to_field_mask(&[
+            GpeoplePersonField::Names,
+            GpeoplePersonField::EmailAddresses
+        ]),
         "names,emailAddresses"
     );
-    assert_eq!(to_field_mask::<PeoplePersonField>(&[]), "");
+    assert_eq!(to_field_mask::<GpeoplePersonField>(&[]), "");
 }
 
 #[test]
 fn serializes_params_into_query_pairs() {
-    let params = PeopleConnectionsListParams {
+    let params = GpeopleConnectionsListParams {
         page_size: Some(10),
         page_token: None,
         request_sync_token: false,
         sync_token: Some("sync-1"),
         sort_order: None,
         sources: &[
-            PeopleReadSourceType::ReadSourceTypeContact,
-            PeopleReadSourceType::ReadSourceTypeProfile,
+            GpeopleReadSourceType::ReadSourceTypeContact,
+            GpeopleReadSourceType::ReadSourceTypeProfile,
         ],
     };
 

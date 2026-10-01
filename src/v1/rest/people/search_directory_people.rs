@@ -13,14 +13,14 @@ use url::Url;
 
 use crate::{
     coroutine::*,
-    people_try,
+    gpeople_try,
     v1::{
         query::{to_field_mask, to_field_pairs, to_query_pairs},
         rest::people::{
-            PeopleDirectoryMergeSourceType, PeopleDirectorySourceType, PeoplePerson,
-            PeoplePersonField,
+            GpeopleDirectoryMergeSourceType, GpeopleDirectorySourceType, GpeoplePerson,
+            GpeoplePersonField,
         },
-        send::{PEOPLE_API_BASE, PeopleSend, PeopleSendError, PeopleSendOutput},
+        send::{GPEOPLE_API_BASE, GpeopleSend, GpeopleSendError, GpeopleSendOutput},
     },
 };
 
@@ -28,9 +28,9 @@ use crate::{
 /// (`people.searchDirectoryPeople`).
 #[derive(Debug, Clone, Default, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleDirectorySearchParams<'a> {
+pub struct GpeopleDirectorySearchParams<'a> {
     /// Additional person data to merge into each directory entry.
-    pub merge_sources: &'a [PeopleDirectoryMergeSourceType],
+    pub merge_sources: &'a [GpeopleDirectoryMergeSourceType],
     /// Maximum number of people to return per page (max 100).
     pub page_size: Option<u32>,
     /// Page token from a previous response, used to retrieve the next page.
@@ -40,10 +40,10 @@ pub struct PeopleDirectorySearchParams<'a> {
 /// People REST directory people search response (one page of persons).
 #[derive(Debug, Clone, Default, Deserialize, Serialize, Eq, PartialEq)]
 #[serde(rename_all = "camelCase")]
-pub struct PeopleDirectorySearchResponse {
+pub struct GpeopleDirectorySearchResponse {
     /// Directory persons matching the query for this page.
     #[serde(default)]
-    pub people: Vec<PeoplePerson>,
+    pub people: Vec<GpeoplePerson>,
     /// Token for retrieving the next page; absent on the final page.
     #[serde(default)]
     pub next_page_token: Option<String>,
@@ -53,11 +53,11 @@ pub struct PeopleDirectorySearchResponse {
 }
 
 /// People REST directory people search, by plain-text prefix query.
-pub struct PeopleDirectorySearch {
-    send: PeopleSend<PeopleDirectorySearchResponse>,
+pub struct GpeopleDirectorySearch {
+    send: GpeopleSend<GpeopleDirectorySearchResponse>,
 }
 
-impl PeopleDirectorySearch {
+impl GpeopleDirectorySearch {
     /// Build a new directory people search coroutine.
     ///
     /// Both `read_mask` and `sources` must be non-empty. `query` is a
@@ -65,10 +65,10 @@ impl PeopleDirectorySearch {
     pub fn new(
         auth: &HttpAuthBearer,
         query: &str,
-        read_mask: &[PeoplePersonField],
-        sources: &[PeopleDirectorySourceType],
-        params: &PeopleDirectorySearchParams,
-    ) -> Result<Self, PeopleSendError> {
+        read_mask: &[GpeoplePersonField],
+        sources: &[GpeopleDirectorySourceType],
+        params: &GpeopleDirectorySearchParams,
+    ) -> Result<Self, GpeopleSendError> {
         debug!("prepare people directory search");
         trace!("query: {query:?}");
         trace!("read_mask: {read_mask:?}");
@@ -76,16 +76,16 @@ impl PeopleDirectorySearch {
         trace!("params: {params:?}");
 
         if read_mask.is_empty() {
-            let err = PeopleSendError::InvalidRequest("Read mask cannot be empty".into());
+            let err = GpeopleSendError::InvalidRequest("Read mask cannot be empty".into());
             return Err(err);
         }
 
         if sources.is_empty() {
-            let err = PeopleSendError::InvalidRequest("Directory sources cannot be empty".into());
+            let err = GpeopleSendError::InvalidRequest("Directory sources cannot be empty".into());
             return Err(err);
         }
 
-        let mut url = Url::parse(PEOPLE_API_BASE)?.join("./people:searchDirectoryPeople")?;
+        let mut url = Url::parse(GPEOPLE_API_BASE)?.join("./people:searchDirectoryPeople")?;
 
         {
             let mut pairs = url.query_pairs_mut();
@@ -95,20 +95,20 @@ impl PeopleDirectorySearch {
             pairs.extend_pairs(to_query_pairs(params));
         }
 
-        let send = PeopleSend::get(auth, url);
+        let send = GpeopleSend::get(auth, url);
 
         Ok(Self { send })
     }
 }
 
-impl PeopleCoroutine for PeopleDirectorySearch {
-    type Yield = PeopleYield;
-    type Return = Result<PeopleSendOutput<PeopleDirectorySearchResponse>, PeopleSendError>;
+impl GpeopleCoroutine for GpeopleDirectorySearch {
+    type Yield = GpeopleYield;
+    type Return = Result<GpeopleSendOutput<GpeopleDirectorySearchResponse>, GpeopleSendError>;
 
-    fn resume(&mut self, arg: Option<&[u8]>) -> PeopleCoroutineState<Self::Yield, Self::Return> {
-        let out = people_try!(&mut self.send, arg);
+    fn resume(&mut self, arg: Option<&[u8]>) -> GpeopleCoroutineState<Self::Yield, Self::Return> {
+        let out = gpeople_try!(&mut self.send, arg);
         debug!("people directory searched");
         trace!("out: {out:?}");
-        PeopleCoroutineState::Complete(Ok(out))
+        GpeopleCoroutineState::Complete(Ok(out))
     }
 }
