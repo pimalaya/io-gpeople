@@ -28,6 +28,8 @@ pub mod search_contacts;
 pub mod search_directory_people;
 pub mod update_contact;
 pub mod update_contact_photo;
+#[cfg(feature = "vcard")]
+pub mod vcard;
 
 /// Information about a person merged from various data sources such as
 /// the authenticated user's contacts and profile data.
@@ -131,6 +133,15 @@ pub struct GpeoplePerson {
     /// The person's user-defined data entries.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub user_defined: Vec<GpeopleUserDefined>,
+}
+
+impl GpeoplePerson {
+    /// The bare person id behind the `people/<id>` resource name.
+    pub fn id(&self) -> &str {
+        self.resource_name
+            .strip_prefix("people/")
+            .unwrap_or(&self.resource_name)
+    }
 }
 
 /// Metadata about a person.
