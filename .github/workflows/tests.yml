@@ -28,5 +28,5 @@ jobs:
       - name: Run the live tests
         env:
           RUST_LOG: trace
-          GPEOPLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GPEOPLE_SERVICE_ACCOUNT_KEY }}
+          GPEOPLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
         run: nix develop -c cargo test --features rustls-ring,vcard --test people -- --ignored
