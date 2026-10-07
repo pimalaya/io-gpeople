@@ -36,8 +36,12 @@
 //! the request (the `Authorization` header from the caller's bearer
 //! token, `Accept: application/json`, an optional JSON body) and on
 //! completion deserialises the 2xx body into `T`, or parses People's
-//! JSON error envelope into `GpeopleSendError`. A 3xx surfaces as an
-//! unexpected-redirect error; redirects are never followed. Empty 2xx
+//! JSON error envelope into `GpeopleSendError`. The envelope is kept
+//! whole in [`v1::send::GpeopleApiError`] (status, `errors[].reason`,
+//! `status` and `details[].reason`), so callers match rate limits and
+//! an expired sync token on Google's codes rather than on the message
+//! text. A 3xx surfaces as an unexpected-redirect error; redirects are
+//! never followed. Empty 2xx
 //! bodies (delete, batch, stop) deserialise into the `GpeopleNoResponse`
 //! unit marker.
 //!

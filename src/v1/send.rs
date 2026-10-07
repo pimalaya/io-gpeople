@@ -65,32 +65,151 @@ pub enum GpeopleSendError {
     #[error("Invalid People request: {0}")]
     InvalidRequest(String),
     /// The API returned a non-2xx status with an error envelope.
-    #[error("People API returned HTTP {status}: {message}")]
-    Api {
-        /// HTTP status code reported by the API error envelope.
-        status: u16,
-        /// Human-readable error message from the API error envelope.
-        message: String,
-    },
+    #[error("{0}")]
+    Api(GpeopleApiError),
     /// The server issued a redirect, which the client never follows.
     #[error("People server returned an unexpected redirect")]
     UnexpectedRedirect,
 }
 
 impl GpeopleSendError {
-    /// Return the HTTP status code if this is an [`GpeopleSendError::Api`]
-    /// error, otherwise `None`.
-    pub fn status(&self) -> Option<u16> {
+    /// Return the API error when People answered with a non-2xx status.
+    pub fn api(&self) -> Option<&GpeopleApiError> {
         match self {
-            Self::Api { status, .. } => Some(*status),
+            Self::Api(err) => Some(err),
             _ => None,
         }
     }
 
-    /// Return `true` if the error status indicates a transient failure that
-    /// may succeed on retry (429, 500, 502, 503, 504).
+    /// Return the HTTP status code if this is an [`GpeopleSendError::Api`]
+    /// error, otherwise `None`.
+    pub fn status(&self) -> Option<u16> {
+        self.api().map(|err| err.status)
+    }
+
+    /// Return `true` if the error is an API error worth retrying later
+    /// ([`GpeopleApiError::is_retryable`]).
     pub fn is_retryable(&self) -> bool {
-        matches!(self.status(), Some(429 | 500 | 502 | 503 | 504))
+        self.api().is_some_and(GpeopleApiError::is_retryable)
+    }
+
+    /// Return `true` if the error is a rate limit answer
+    /// ([`GpeopleApiError::is_rate_limited`]).
+    pub fn is_rate_limited(&self) -> bool {
+        self.api().is_some_and(GpeopleApiError::is_rate_limited)
+    }
+
+    /// Return `true` if the target of the request does not exist (404).
+    pub fn is_not_found(&self) -> bool {
+        self.status() == Some(404)
+    }
+
+    /// Return `true` if a sync token was refused as expired
+    /// ([`GpeopleApiError::is_sync_token_expired`]): the caller must
+    /// start over with a full listing, without a sync token.
+    pub fn is_sync_token_expired(&self) -> bool {
+        self.api()
+            .is_some_and(GpeopleApiError::is_sync_token_expired)
+    }
+}
+
+/// The People error envelope, read from a non-2xx answer.
+///
+/// Google answers errors as
+/// `{"error":{"code":400,"message":"...","errors":[{"reason":"failedPrecondition",...}],"status":"FAILED_PRECONDITION","details":[{"reason":"EXPIRED_SYNC_TOKEN",...}]}}`;
+/// the reasons and statuses are kept so callers match on codes rather
+/// than on the message text.
+#[derive(Debug, Clone, Default, Eq, PartialEq, Error)]
+#[error("People API returned HTTP {status}: {message}")]
+pub struct GpeopleApiError {
+    /// The effective status code: `error.code` when present, the HTTP
+    /// status otherwise.
+    pub status: u16,
+    /// The error message, from the envelope or the raw body.
+    pub message: String,
+    /// The reasons of `error.errors[]`, in order, such as
+    /// `rateLimitExceeded` or `failedPrecondition`.
+    pub reasons: Vec<String>,
+    /// The canonical status of `error.status`, such as `NOT_FOUND`,
+    /// `FAILED_PRECONDITION` or `RESOURCE_EXHAUSTED`.
+    pub google_status: Option<String>,
+    /// The reasons of `error.details[]` (`google.rpc.ErrorInfo`), such
+    /// as `EXPIRED_SYNC_TOKEN` or `RATE_LIMIT_EXCEEDED`.
+    pub detail_reasons: Vec<String>,
+}
+
+impl GpeopleApiError {
+    /// Read the People error envelope out of a non-2xx answer, falling
+    /// back to the raw body as message.
+    pub fn parse(http_status: u16, body: &[u8]) -> Self {
+        let (status, message) = parse_api_error(http_status, body);
+        let mut err = Self {
+            status,
+            message,
+            ..Default::default()
+        };
+
+        if let Ok(envelope) = serde_json::from_slice::<ErrorEnvelope>(body) {
+            let error = envelope.error;
+            err.reasons = error.errors.into_iter().filter_map(|e| e.reason).collect();
+            err.google_status = error.status;
+            err.detail_reasons = error.details.into_iter().filter_map(|d| d.reason).collect();
+        }
+
+        err
+    }
+
+    /// Return `true` if `reason` is one of [`Self::reasons`] or
+    /// [`Self::detail_reasons`].
+    pub fn has_reason(&self, reason: &str) -> bool {
+        self.reasons
+            .iter()
+            .chain(&self.detail_reasons)
+            .any(|r| r == reason)
+    }
+
+    /// Return `true` if Google throttled the request: a 429, a
+    /// `RESOURCE_EXHAUSTED` status, or a 403 whose reason is
+    /// `rateLimitExceeded`, `userRateLimitExceeded`, `quotaExceeded` or
+    /// `RATE_LIMIT_EXCEEDED`.
+    ///
+    /// The daily quota (`dailyLimitExceeded`) is not a rate limit:
+    /// waiting a minute does not lift it.
+    pub fn is_rate_limited(&self) -> bool {
+        if self.status == 429 || self.google_status.as_deref() == Some("RESOURCE_EXHAUSTED") {
+            return true;
+        }
+
+        self.status == 403
+            && [
+                "rateLimitExceeded",
+                "userRateLimitExceeded",
+                "quotaExceeded",
+                "RATE_LIMIT_EXCEEDED",
+            ]
+            .iter()
+            .any(|reason| self.has_reason(reason))
+    }
+
+    /// Return `true` if the request is worth sending again later: rate
+    /// limited ([`Self::is_rate_limited`]) or a transient 5xx.
+    pub fn is_retryable(&self) -> bool {
+        self.is_rate_limited() || matches!(self.status, 500 | 502 | 503 | 504)
+    }
+
+    /// Return `true` if the target of the request does not exist (404).
+    pub fn is_not_found(&self) -> bool {
+        self.status == 404
+    }
+
+    /// Return `true` if a `syncToken` was refused as expired: a 410, or
+    /// a 400 carrying the `EXPIRED_SYNC_TOKEN` reason. Sync tokens expire
+    /// seven days after the full listing that issued them, and the caller
+    /// must then list again without one.
+    ///
+    /// <https://developers.google.com/people/api/rest/v1/people.connections/list>
+    pub fn is_sync_token_expired(&self) -> bool {
+        self.status == 410 || (self.status == 400 && self.has_reason("EXPIRED_SYNC_TOKEN"))
     }
 }
 
@@ -245,11 +364,8 @@ impl<T: DeserializeOwned> GpeopleCoroutine for GpeopleSend<T> {
                             )),
                         }
                     } else {
-                        let (status, message) = parse_api_error(*response.status, &response.body);
-                        GpeopleCoroutineState::Complete(Err(GpeopleSendError::Api {
-                            status,
-                            message,
-                        }))
+                        let err = GpeopleApiError::parse(*response.status, &response.body);
+                        GpeopleCoroutineState::Complete(Err(GpeopleSendError::Api(err)))
                     }
                 }
             },
@@ -278,6 +394,20 @@ struct ErrorEnvelope {
 struct ErrorBody {
     code: Option<u16>,
     message: Option<String>,
+    #[serde(default)]
+    status: Option<String>,
+    #[serde(default)]
+    errors: Vec<ErrorItem>,
+    #[serde(default)]
+    details: Vec<ErrorItem>,
+}
+
+/// One entry of `error.errors[]` or `error.details[]`, of which only the
+/// reason is read.
+#[derive(Debug, Deserialize)]
+struct ErrorItem {
+    #[serde(default)]
+    reason: Option<String>,
 }
 
 /// Extract a `(status, message)` pair from a People API error response body,

@@ -24,7 +24,7 @@ use io_gpeople::v1::{
             update_contact::GpeopleContactUpdate,
         },
     },
-    send::{GpeopleSendError, parse_api_error},
+    send::{GpeopleApiError, GpeopleSendError, parse_api_error},
 };
 use io_http::rfc6750::bearer::HttpAuthBearer;
 
@@ -398,12 +398,78 @@ fn surfaces_api_errors() {
     let (ret, _) = run(&mut coroutine, &response);
 
     match ret.unwrap_err() {
-        GpeopleSendError::Api { status, message } => {
-            assert_eq!(status, 403);
-            assert_eq!(message, "insufficient permissions");
+        GpeopleSendError::Api(err) => {
+            assert_eq!(err.status, 403);
+            assert_eq!(err.message, "insufficient permissions");
         }
         err => panic!("unexpected error: {err}"),
     }
+}
+
+#[test]
+fn an_expired_sync_token_is_told_by_its_code() {
+    // NOTE: the answer People gives a sync token older than seven days.
+    let response = json_response(
+        "HTTP/1.1 400 Bad Request",
+        r#"{"error":{"code":400,"message":"Sync token is expired. Clear local cache and retry call without the sync token.","status":"FAILED_PRECONDITION","details":[{"@type":"type.googleapis.com/google.rpc.ErrorInfo","reason":"EXPIRED_SYNC_TOKEN","domain":"people.googleapis.com"}]}}"#,
+    );
+    let mut coroutine = GpeopleConnectionsList::new(
+        &auth(),
+        &[GpeoplePersonField::Names],
+        &GpeopleConnectionsListParams {
+            sync_token: Some("old"),
+            ..Default::default()
+        },
+    )
+    .unwrap();
+    let (ret, _) = run(&mut coroutine, &response);
+    let err = ret.unwrap_err();
+
+    assert!(err.is_sync_token_expired());
+    let api = err.api().unwrap();
+    assert_eq!(api.status, 400);
+    assert_eq!(api.google_status.as_deref(), Some("FAILED_PRECONDITION"));
+    assert_eq!(api.detail_reasons, ["EXPIRED_SYNC_TOKEN"]);
+    assert!(!err.is_retryable());
+
+    // NOTE: the older answer, a bare 410.
+    let gone = GpeopleApiError::parse(410, br#"{"error":{"code":410,"message":"Gone"}}"#);
+    assert!(gone.is_sync_token_expired());
+
+    // NOTE: another 400 is not an expired token, whatever its text.
+    let other = GpeopleApiError::parse(
+        400,
+        br#"{"error":{"code":400,"message":"Sync token is expired","status":"INVALID_ARGUMENT"}}"#,
+    );
+    assert!(!other.is_sync_token_expired());
+}
+
+#[test]
+fn rate_limits_are_told_by_their_codes() {
+    let minute = GpeopleApiError::parse(
+        403,
+        br#"{"error":{"code":403,"message":"Quota exceeded for quota metric 'Read requests' and limit 'Read requests per minute per user'","errors":[{"reason":"rateLimitExceeded"}],"status":"PERMISSION_DENIED","details":[{"reason":"RATE_LIMIT_EXCEEDED"}]}}"#,
+    );
+    assert!(minute.is_rate_limited());
+    assert!(minute.is_retryable());
+    assert_eq!(minute.reasons, ["rateLimitExceeded"]);
+
+    let exhausted = GpeopleApiError::parse(
+        429,
+        br#"{"error":{"code":429,"message":"slow down","status":"RESOURCE_EXHAUSTED"}}"#,
+    );
+    assert!(exhausted.is_rate_limited());
+
+    let daily = GpeopleApiError::parse(
+        403,
+        br#"{"error":{"code":403,"message":"daily","errors":[{"reason":"dailyLimitExceeded"}]}}"#,
+    );
+    assert!(!daily.is_rate_limited());
+    assert!(!daily.is_retryable());
+
+    let gone = GpeopleApiError::parse(404, b"<title>Not Found</title>");
+    assert!(gone.is_not_found());
+    assert_eq!(gone.message, "Not Found");
 }
 
 #[test]

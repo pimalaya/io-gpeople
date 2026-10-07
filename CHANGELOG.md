@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added `GpeopleApiError`, Google's error envelope kept whole: the status, the message, the reasons of `error.errors[]`, the canonical `error.status` and the reasons of `error.details[]`.
+
+  Callers match codes instead of text through `has_reason`, `is_rate_limited` (429, `RESOURCE_EXHAUSTED`, or a 403 for `rateLimitExceeded`, `userRateLimitExceeded`, `quotaExceeded` or `RATE_LIMIT_EXCEEDED`; the daily quota is not a rate limit), `is_retryable`, `is_not_found` and `is_sync_token_expired` (a 410, or a 400 carrying `EXPIRED_SYNC_TOKEN`: list again without the sync token).
+
+- Added `GpeopleSendError::api`, `is_rate_limited`, `is_not_found` and `is_sync_token_expired`.
+
+### Changed
+
+- Changed `GpeopleSendError::Api` to carry a `GpeopleApiError`. **Breaking change.**
+
+  `GpeopleSendError::Api { status, message }` becomes `GpeopleSendError::Api(err)`, with `err.status` and `err.message`. `is_retryable` now also holds for a rate-limiting 403.
+
 ## [0.4.2] - 2026-10-01
 
 ### Added
