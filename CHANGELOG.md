@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-07
+
 ### Added
 
 - Added `GpeopleApiError`, Google's error envelope kept whole: the status, the message, the reasons of `error.errors[]`, the canonical `error.status` and the reasons of `error.details[]`.
@@ -108,7 +110,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the I/O-free coroutines for the Google People API v1: people, connections, contact groups and other contacts.
 - Added `PeopleClientStd`, a std blocking client behind the `client` feature.
 
-[unreleased]: https://github.com/pimalaya/io-gpeople/compare/v0.4.2..HEAD
+[unreleased]: https://github.com/pimalaya/io-gpeople/compare/v0.5.0..HEAD
+[0.5.0]: https://github.com/pimalaya/io-gpeople/compare/v0.4.2..v0.5.0
 [0.4.2]: https://github.com/pimalaya/io-gpeople/compare/v0.4.1..v0.4.2
 [0.4.1]: https://github.com/pimalaya/io-gpeople/compare/v0.4.0..v0.4.1
 [0.4.0]: https://github.com/pimalaya/io-gpeople/compare/v0.3.1..v0.4.0
