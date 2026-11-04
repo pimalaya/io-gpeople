@@ -5,9 +5,9 @@
 //!
 //! <https://developers.google.com/people/api/rest/v1/people/updateContactPhoto>
 
-use alloc::{format, string::String};
+use alloc::{format, string::String, vec::Vec};
 
-use base64::{Engine, engine::general_purpose::STANDARD};
+use base64_codec::codec::Base64Codec;
 use io_http::rfc6750::bearer::HttpAuthBearer;
 use log::{debug, trace};
 use serde::{Deserialize, Serialize};
@@ -79,7 +79,7 @@ impl GpeopleContactPhotoUpdate {
             Url::parse(GPEOPLE_API_BASE)?.join(&format!("{resource_name}:updateContactPhoto"))?;
 
         let request = Request {
-            photo_bytes: STANDARD.encode(photo),
+            photo_bytes: encode_photo(photo),
             person_fields: to_field_mask(person_fields),
             sources,
         };
@@ -100,4 +100,14 @@ impl GpeopleCoroutine for GpeopleContactPhotoUpdate {
         trace!("out: {out:?}");
         GpeopleCoroutineState::Complete(Ok(out))
     }
+}
+
+/// Encodes photo bytes into the padded standard base64 of `photoBytes`, on
+/// the CPU token the application installed.
+fn encode_photo(photo: &[u8]) -> String {
+    let mut encoded = Vec::new();
+    Base64Codec::default().encode_vec(photo, &mut encoded);
+
+    // NOTE: the base64 alphabet is ASCII, so this never falls back.
+    String::from_utf8(encoded).unwrap_or_default()
 }

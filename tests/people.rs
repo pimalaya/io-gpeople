@@ -56,7 +56,7 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use base64::{Engine, engine::general_purpose::STANDARD};
+use base64_codec::codec::Base64Codec;
 #[cfg(feature = "vcard")]
 use io_gpeople::v1::rest::people::vcard::GPEOPLE_PERSON_VCARD_FIELDS;
 use io_gpeople::v1::{
@@ -426,7 +426,9 @@ fn membership(client: &mut GpeopleClientStd, group: &str, contact: &str) {
 
 /// Uploads a photo for the test contact, then deletes it.
 fn photo(client: &mut GpeopleClientStd, contact: &str) {
-    let photo = STANDARD.decode(PHOTO_BASE64).expect("the photo is base64");
+    let mut photo = Vec::new();
+    let clean = Base64Codec::default().decode_vec(PHOTO_BASE64.as_bytes(), &mut photo);
+    assert!(clean, "the photo is base64");
     let fields = &[GpeoplePersonField::Photos];
 
     let coroutine = GpeopleContactPhotoUpdate::new(&client.auth, contact, &photo, fields, &[])

@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Changed the minimum Rust version to 1.89.
 
+- Replaced the base64 crate with [base64-codec](https://crates.io/crates/base64-codec) for `GpeopleContactPhotoUpdate`.
+
+  It runs on the CPU token the application installs with `simd_cpu::SimdCpu::install_detected`, the portable baseline when none is.
+
 ## [0.5.0] - 2026-10-07
 
 ### Added

@@ -22,6 +22,7 @@ use io_gpeople::v1::{
             get::GpeoplePersonGet,
             search_contacts::GpeopleContactsSearch,
             update_contact::GpeopleContactUpdate,
+            update_contact_photo::GpeopleContactPhotoUpdate,
         },
     },
     send::{GpeopleApiError, GpeopleSendError, parse_api_error},
@@ -182,6 +183,25 @@ fn deletes_contact() {
         request.starts_with("DELETE /v1/people/c1:deleteContact"),
         "got: {request}"
     );
+}
+
+#[test]
+fn updates_contact_photo() {
+    let response = json_response("HTTP/1.1 200 OK", "{}");
+    let photo = [0xfb, 0xff];
+    let mut coroutine =
+        GpeopleContactPhotoUpdate::new(&auth(), "people/c1", &photo, &[], &[]).unwrap();
+    let (ret, written) = run(&mut coroutine, &response);
+
+    ret.unwrap();
+
+    let request = String::from_utf8_lossy(&written);
+    assert!(
+        request.starts_with("PATCH /v1/people/c1:updateContactPhoto"),
+        "got: {request}"
+    );
+    // NOTE: the standard alphabet, padded, not base64url.
+    assert!(request.contains(r#""photoBytes":"+/8=""#), "got: {request}");
 }
 
 #[test]
