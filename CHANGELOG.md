@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Changed the io-http dependency to 0.6. **Breaking change.**
+
+  `GpeopleSendError::Send` carries io-http 0.6's `Http11SendError`, which fails with `HeadersTooLarge`, `BodyTooLarge` and `Eof` on an oversized or truncated response.
+
+- Changed the vcard-rs dependency to 0.6. **Breaking change.**
+
+  `GpeoplePersonVcardError::Parse` carries vcard-rs 0.6's `VcardParseError`. `GpeoplePerson::to_vcard` folds lines longer than 75 octets.
+
+- Changed the minimum Rust version to 1.89.
+
 ## [0.5.0] - 2026-10-07
 
 ### Added

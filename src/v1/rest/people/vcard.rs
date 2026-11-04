@@ -25,6 +25,7 @@ use core::{fmt, str::FromStr};
 
 use alloc::{
     borrow::Cow,
+    boxed::Box,
     format,
     string::{String, ToString},
     vec,
@@ -747,7 +748,7 @@ fn adr_prop(address: &GpeopleAddress) -> Option<VcardProp<'static>> {
             .map(type_param)
             .into_iter()
             .collect(),
-        value: VcardValue::Adr(value),
+        value: VcardValue::Adr(Box::new(value)),
     })
 }
 
