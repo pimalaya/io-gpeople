@@ -1,3 +1,9 @@
+---
+cairn: spec
+capability: etags
+status: current
+---
+
 # Etags and `updateContact`
 
 The People API guards writes with an etag: `people.updateContact` (and `batchUpdateContacts`, `updateContactPhoto`, `deleteContactPhoto`) require the person to carry an etag, and reject the write when it does not match the server's current one with `HTTP 400: Request person.etag is different than the current person.etag. Clear local cache and get the latest person.`
@@ -22,6 +28,12 @@ This is Google's own "clear local cache and get the latest person" guidance.
 
 Step 2 drops the optimistic-concurrency guard for that write: the refetched etag is whatever the server holds right now, so retrying overwrites a concurrent remote change instead of detecting it. This is only safe when either last-writer-wins is acceptable, or a higher layer already guards concurrency independently. For example a sync engine whose enumerate re-lists (and re-flags as a conflict) any remotely-changed card before the push runs: there the retry only bridges the etag-representation gap, because a genuine remote change has already been caught upstream and the rejected card is never pushed. A client without such a guard should surface the mismatch to its caller rather than retry blindly.
 
-## Why the library does not do this for you
+### Requirement: No built-in etag retry
 
-The coroutines are I/O-free: driving a get, an update, and a conditional second update is the consumer's transport concern, and the refetch-and-retry above is a policy that trades safety for convenience, so it is not baked into the low-level calls. The std `client` feature could grow an opt-in helper for it later; until then each consumer implements the retry where it can see its own concurrency guard.
+`GpeopleContactUpdate` SHALL send the etag the person carries and SHALL surface an etag mismatch to its caller as the API error, without re-reading the person or retrying. The coroutines are I/O-free and the refetch-and-retry above trades safety for convenience, so each consumer implements it where it can see its own concurrency guard. The std `client` feature could grow an opt-in helper for it later.
+
+#### Scenario: Update guarded by a list etag
+
+- GIVEN a person whose etag came from `people.connections.list`
+- WHEN `GpeopleContactUpdate` sends it and the server answers the etag-mismatch `400`
+- THEN the coroutine completes with `GpeopleSendError::Api`, and no `people.get` nor second update is sent

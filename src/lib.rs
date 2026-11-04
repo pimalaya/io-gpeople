@@ -78,7 +78,7 @@
 //! flagged `metadata.deleted`). An expired token surfaces as HTTP 410,
 //! which callers handle by re-baselining with a full listing. The etag
 //! gotcha `updateContact` exposes is documented in
-//! [docs/etags.md](https://github.com/pimalaya/io-gpeople/blob/master/docs/etags.md).
+//! [cairn/spec/etags.md](https://github.com/pimalaya/io-gpeople/blob/master/cairn/spec/etags.md).
 //!
 //! ## The std client
 //!

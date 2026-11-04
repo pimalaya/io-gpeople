@@ -5,7 +5,7 @@
 //!
 //! The etag must come from a `people.get` or a prior create/update
 //! response: a `connections.list` etag is rejected with `HTTP 400`, so the
-//! first edit after a pull needs the etag re-read. See `docs/etags.md`.
+//! first edit after a pull needs the etag re-read. See cairn/spec/etags.md.
 //!
 //! <https://developers.google.com/people/api/rest/v1/people/updateContact>
 
