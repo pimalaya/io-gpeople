@@ -19,7 +19,9 @@ use io_gpeople::{
                 list::{GpeopleOtherContactsList, GpeopleOtherContactsListParams},
             },
             people::{
-                GpeopleName, GpeoplePerson, GpeoplePersonField, GpeopleReadSourceType,
+                GpeopleAgeRange, GpeopleContentType, GpeopleMiscKeywordType, GpeopleName,
+                GpeopleNicknameType, GpeopleObjectType, GpeoplePerson, GpeoplePersonField,
+                GpeopleReadSourceType, GpeopleSourceType,
                 connections::list::{GpeopleConnectionsList, GpeopleConnectionsListParams},
                 create_contact::GpeopleContactCreate,
                 delete_contact::GpeopleContactDelete,
@@ -515,6 +517,114 @@ fn rejects_a_resource_name_outside_its_collection() {
     let fields = [GpeoplePersonField::Names];
     let result = GpeopleOtherContactCopy::new(&auth(), "people/c1", &fields, &[], &[]);
     assert!(matches!(result, Err(GpeopleSendError::InvalidRequest(_))));
+}
+
+/// A person holding, in every enum a response fills, a value to come.
+const FUTURE_PERSON: &str = r#"{"resourceName":"people/c1","etag":"tag-1","metadata":{"sources":[{"type":"FUTURE_SOURCE","id":"1"}],"objectType":"FUTURE_OBJECT"},"names":[{"metadata":{"primary":true,"source":{"type":"FUTURE_SOURCE","id":"1","profileMetadata":{"objectType":"FUTURE_OBJECT"}}},"displayName":"Jane Doe"}],"nicknames":[{"value":"Janie","type":"FUTURE_NICKNAME"}],"biographies":[{"value":"a note","contentType":"FUTURE_CONTENT"}],"miscKeywords":[{"value":"vip","type":"FUTURE_KEYWORD"}],"ageRanges":[{"ageRange":"FUTURE_RANGE"}]}"#;
+
+#[test]
+fn an_unknown_enum_value_does_not_fail_the_page() {
+    let body = format!(r#"{{"connections":[{FUTURE_PERSON}],"totalItems":1}}"#);
+    let response = json_response("HTTP/1.1 200 OK", &body);
+    let mut coroutine = GpeopleConnectionsList::new(
+        &auth(),
+        &[GpeoplePersonField::Names],
+        &GpeopleConnectionsListParams::default(),
+    )
+    .unwrap();
+    let (ret, _) = run(&mut coroutine, &response);
+
+    let person = &ret.unwrap().response.connections[0];
+    assert_eq!(person.names[0].display_name.as_deref(), Some("Jane Doe"));
+    assert_eq!(person.nicknames[0].value.as_deref(), Some("Janie"));
+    assert_eq!(person.biographies[0].value.as_deref(), Some("a note"));
+    assert_eq!(person.misc_keywords[0].value.as_deref(), Some("vip"));
+
+    let metadata = person.metadata.as_ref().unwrap();
+    assert_eq!(metadata.object_type, Some(GpeopleObjectType::Unknown));
+    assert_eq!(
+        metadata.sources[0].source_type,
+        Some(GpeopleSourceType::Unknown)
+    );
+
+    let source = person.names[0].metadata.as_ref().unwrap().source.as_ref();
+    let source = source.unwrap();
+    assert_eq!(source.source_type, Some(GpeopleSourceType::Unknown));
+    assert_eq!(
+        source.profile_metadata.as_ref().unwrap().object_type,
+        Some(GpeopleObjectType::Unknown)
+    );
+
+    assert_eq!(
+        person.nicknames[0].nickname_type,
+        Some(GpeopleNicknameType::Unknown)
+    );
+    assert_eq!(
+        person.biographies[0].content_type,
+        Some(GpeopleContentType::Unknown)
+    );
+    assert_eq!(
+        person.misc_keywords[0].keyword_type,
+        Some(GpeopleMiscKeywordType::Unknown)
+    );
+    assert_eq!(
+        person.age_ranges[0].age_range,
+        Some(GpeopleAgeRange::Unknown)
+    );
+}
+
+#[test]
+fn an_unknown_group_type_does_not_fail_the_listing() {
+    let response = json_response(
+        "HTTP/1.1 200 OK",
+        r#"{"contactGroups":[{"resourceName":"contactGroups/abc","groupType":"FUTURE_GROUP","name":"Friends"}]}"#,
+    );
+    let params = GpeopleContactGroupsListParams::default();
+    let mut coroutine = GpeopleContactGroupsList::new(&auth(), &[], &params).unwrap();
+    let (ret, _) = run(&mut coroutine, &response);
+
+    let group = &ret.unwrap().response.contact_groups[0];
+    assert_eq!(group.name.as_deref(), Some("Friends"));
+    assert_eq!(group.group_type, Some(GpeopleContactGroupType::Unknown));
+
+    let mut coroutine = GpeopleContactGroupUpdate::new(&auth(), group, &[], &[]).unwrap();
+    let (_, written) = run(&mut coroutine, &empty_response("HTTP/1.1 200 OK"));
+    let request = String::from_utf8_lossy(&written);
+    assert!(!request.contains("groupType"), "got: {request}");
+}
+
+#[test]
+fn an_unknown_enum_value_is_never_written_back() {
+    let person: GpeoplePerson = serde_json::from_str(FUTURE_PERSON).unwrap();
+    let fields = [GpeoplePersonField::Nicknames];
+    let mut coroutine = GpeopleContactUpdate::new(&auth(), &person, &fields, &[], &[]).unwrap();
+    let (_, written) = run(&mut coroutine, &empty_response("HTTP/1.1 200 OK"));
+
+    let request = String::from_utf8_lossy(&written);
+    assert!(
+        request.contains(r#""nicknames":[{"value":"Janie"}]"#),
+        "got: {request}"
+    );
+    assert!(
+        request.contains(r#""biographies":[{"value":"a note"}]"#),
+        "got: {request}"
+    );
+    assert!(!request.contains("FUTURE"), "got: {request}");
+    assert!(
+        !request.to_lowercase().contains("unknown"),
+        "got: {request}"
+    );
+}
+
+#[test]
+fn an_empty_success_body_reads_as_an_empty_object() {
+    let mut coroutine = GpeopleContactPhotoDelete::new(&auth(), "people/c1", &[], &[]).unwrap();
+    let (ret, _) = run(&mut coroutine, &empty_response("HTTP/1.1 200 OK"));
+    assert_eq!(ret.unwrap().response.person, None);
+
+    let mut coroutine = GpeopleContactDelete::new(&auth(), "people/c1").unwrap();
+    let (ret, _) = run(&mut coroutine, &empty_response("HTTP/1.1 204 No Content"));
+    ret.unwrap();
 }
 
 #[test]

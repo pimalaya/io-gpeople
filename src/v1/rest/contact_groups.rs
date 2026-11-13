@@ -31,7 +31,7 @@ pub struct GpeopleContactGroup {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metadata: Option<GpeopleContactGroupMetadata>,
     /// Whether this is a user-created group or a system group.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "GpeopleContactGroupType::is_unwritten")]
     pub group_type: Option<GpeopleContactGroupType>,
     /// User-defined name of the contact group.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -72,6 +72,16 @@ pub enum GpeopleContactGroupType {
     UserContactGroup,
     /// Read-only group maintained by Google (e.g. "Starred").
     SystemContactGroup,
+    /// A group type this crate does not know, which a write leaves out.
+    #[serde(other)]
+    Unknown,
+}
+
+impl GpeopleContactGroupType {
+    /// Whether a group type stays out of a written body: unset or unknown.
+    fn is_unwritten(group_type: &Option<Self>) -> bool {
+        matches!(group_type, None | Some(Self::Unknown))
+    }
 }
 
 /// Arbitrary client data attached to a contact group.

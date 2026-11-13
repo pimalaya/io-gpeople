@@ -21,7 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   The person is its `person` field, and `dropped` names the lines over 8 KiB the stash does not hold.
 
+- Changed `GpeopleSourceType`, `GpeopleObjectType`, `GpeopleAgeRange`, `GpeopleContentType`, `GpeopleMiscKeywordType`, `GpeopleNicknameType` and `GpeopleContactGroupType` to carry an `Unknown` variant. **Breaking change.**
+
+  A value the crate does not know reads as `Unknown` instead of failing the whole response, and is left out of written bodies.
+
 ### Fixed
+
+- Fixed an empty 2xx body failing every struct response.
+
+  It reads as `{}`, so the response takes its defaults.
 
 - Fixed `GpeoplePerson::from_vcard` and `GpeoplePerson::to_vcard` truncating a folded unmanaged property.
 

@@ -6,7 +6,7 @@
 //! `GPEOPLE_ACCESS_TOKEN` environment variable:
 //!
 //! ```sh
-//! GPEOPLE_ACCESS_TOKEN="<token>" cargo run --example std_people
+//! GPEOPLE_ACCESS_TOKEN="<token>" cargo run --example std_gpeople
 //! ```
 
 use std::env;

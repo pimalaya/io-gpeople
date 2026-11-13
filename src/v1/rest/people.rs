@@ -161,7 +161,7 @@ pub struct GpeoplePersonMetadata {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deleted: Option<bool>,
     /// The type of the person object.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "GpeopleObjectType::is_unwritten")]
     pub object_type: Option<GpeopleObjectType>,
 }
 
@@ -170,7 +170,11 @@ pub struct GpeoplePersonMetadata {
 #[serde(rename_all = "camelCase")]
 pub struct GpeopleSource {
     /// The source type (wire field: `type`).
-    #[serde(default, rename = "type", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "type",
+        skip_serializing_if = "GpeopleSourceType::is_unwritten"
+    )]
     pub source_type: Option<GpeopleSourceType>,
     /// The unique identifier of the source within its type.
     #[serde(default, skip_serializing_if = "String::is_empty")]
@@ -205,6 +209,16 @@ pub enum GpeopleSourceType {
     OtherContact,
     /// Google Workspace domain-shared contact.
     DomainContact,
+    /// A source type this crate does not know, which a write leaves out.
+    #[serde(other)]
+    Unknown,
+}
+
+impl GpeopleSourceType {
+    /// Whether a source type stays out of a written body: unset or unknown.
+    fn is_unwritten(source_type: &Option<Self>) -> bool {
+        matches!(source_type, None | Some(Self::Unknown))
+    }
 }
 
 /// Metadata about a profile.
@@ -212,7 +226,7 @@ pub enum GpeopleSourceType {
 #[serde(rename_all = "camelCase")]
 pub struct GpeopleProfileMetadata {
     /// The type of the profile object.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "GpeopleObjectType::is_unwritten")]
     pub object_type: Option<GpeopleObjectType>,
     /// The user types of the profile.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -229,6 +243,16 @@ pub enum GpeopleObjectType {
     Person,
     /// Currents (Google+) page object.
     Page,
+    /// An object type this crate does not know, which a write leaves out.
+    #[serde(other)]
+    Unknown,
+}
+
+impl GpeopleObjectType {
+    /// Whether an object type stays out of a written body: unset or unknown.
+    fn is_unwritten(object_type: &Option<Self>) -> bool {
+        matches!(object_type, None | Some(Self::Unknown))
+    }
 }
 
 /// Metadata about a person field: its source and primary/verified flags.
@@ -316,7 +340,7 @@ pub struct GpeopleAgeRangeType {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub metadata: Option<GpeopleFieldMetadata>,
     /// The age range of the person.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "GpeopleAgeRange::is_unwritten")]
     pub age_range: Option<GpeopleAgeRange>,
 }
 
@@ -332,6 +356,16 @@ pub enum GpeopleAgeRange {
     EighteenToTwenty,
     /// 21 years or older.
     TwentyOneOrOlder,
+    /// An age range this crate does not know, which a write leaves out.
+    #[serde(other)]
+    Unknown,
+}
+
+impl GpeopleAgeRange {
+    /// Whether an age range stays out of a written body: unset or unknown.
+    fn is_unwritten(age_range: &Option<Self>) -> bool {
+        matches!(age_range, None | Some(Self::Unknown))
+    }
 }
 
 /// Person's short biography.
@@ -345,7 +379,7 @@ pub struct GpeopleBiography {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
     /// The content type of the biography.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "GpeopleContentType::is_unwritten")]
     pub content_type: Option<GpeopleContentType>,
 }
 
@@ -359,6 +393,16 @@ pub enum GpeopleContentType {
     TextPlain,
     /// HTML content.
     TextHtml,
+    /// A content type this crate does not know, which a write leaves out.
+    #[serde(other)]
+    Unknown,
+}
+
+impl GpeopleContentType {
+    /// Whether a content type stays out of a written body: unset or unknown.
+    fn is_unwritten(content_type: &Option<Self>) -> bool {
+        matches!(content_type, None | Some(Self::Unknown))
+    }
 }
 
 /// Person's birthday, as a structured date and/or free-form text.
@@ -645,7 +689,11 @@ pub struct GpeopleMiscKeyword {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
     /// The type of the miscellaneous keyword (wire field: `type`).
-    #[serde(default, rename = "type", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "type",
+        skip_serializing_if = "GpeopleMiscKeywordType::is_unwritten"
+    )]
     pub keyword_type: Option<GpeopleMiscKeywordType>,
     /// The read-only type formatted for display.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -680,6 +728,16 @@ pub enum GpeopleMiscKeywordType {
     Work,
     /// Other keyword.
     Other,
+    /// A keyword type this crate does not know, which a write leaves out.
+    #[serde(other)]
+    Unknown,
+}
+
+impl GpeopleMiscKeywordType {
+    /// Whether a keyword type stays out of a written body: unset or unknown.
+    fn is_unwritten(keyword_type: &Option<Self>) -> bool {
+        matches!(keyword_type, None | Some(Self::Unknown))
+    }
 }
 
 /// Person's name.
@@ -746,7 +804,11 @@ pub struct GpeopleNickname {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<String>,
     /// The type of the nickname (wire field: `type`).
-    #[serde(default, rename = "type", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        rename = "type",
+        skip_serializing_if = "GpeopleNicknameType::is_unwritten"
+    )]
     pub nickname_type: Option<GpeopleNicknameType>,
 }
 
@@ -768,6 +830,16 @@ pub enum GpeopleNicknameType {
     AlternateName,
     /// Short name.
     ShortName,
+    /// A nickname type this crate does not know, which a write leaves out.
+    #[serde(other)]
+    Unknown,
+}
+
+impl GpeopleNicknameType {
+    /// Whether a nickname type stays out of a written body: unset or unknown.
+    fn is_unwritten(nickname_type: &Option<Self>) -> bool {
+        matches!(nickname_type, None | Some(Self::Unknown))
+    }
 }
 
 /// Person's occupation.

@@ -41,9 +41,9 @@
 //! `status` and `details[].reason`), so callers match rate limits and
 //! an expired sync token on Google's codes rather than on the message
 //! text. A 3xx surfaces as an unexpected-redirect error; redirects are
-//! never followed. Empty 2xx
-//! bodies (delete, batch, stop) deserialise into the `GpeopleNoResponse`
-//! unit marker.
+//! never followed. An empty 2xx body reads as `{}`: the
+//! `GpeopleNoResponse` unit marker ignores it (delete), and a struct
+//! response takes its defaults.
 //!
 //! ## The coroutine contract
 //!
@@ -58,12 +58,14 @@
 //!
 //! ## Types
 //!
-//! Domain types are `People`-prefixed
+//! Domain types are `Gpeople`-prefixed
 //! ([`v1::rest::people::GpeoplePerson`], ...), never re-exported at the
 //! crate root, and mirror the REST schema fully. A full-resource request
 //! body takes the whole resource by reference; enum-valued wire fields
-//! are typed `People`-prefixed enums, while free-form `type` labels stay
-//! `Option<String>` since the API accepts custom values there. Field
+//! are typed `Gpeople`-prefixed enums, while free-form `type` labels stay
+//! `Option<String>` since the API accepts custom values there. An enum a
+//! response fills reads a value it does not know as its `Unknown`
+//! variant, which a write leaves out. Field
 //! masks take `&[GpeoplePersonField]` / `&[GpeopleGroupField]` joined by
 //! [`v1::query::to_field_mask`]; list methods take a borrowed `*Params`
 //! struct flattened into query pairs by [`v1::query`]'s tiny no_std serde
@@ -75,8 +77,10 @@
 //! sync is a token loop on the list methods. `people.connections.list`
 //! and `otherContacts.list` return a sync token on the last page;
 //! passing it back returns only what changed (deletions come back
-//! flagged `metadata.deleted`). An expired token surfaces as HTTP 410,
-//! which callers handle by re-baselining with a full listing. The etag
+//! flagged `metadata.deleted`). An expired token surfaces as a 410, or
+//! as a 400 carrying `EXPIRED_SYNC_TOKEN`, both told by
+//! [`v1::send::GpeopleSendError::is_sync_token_expired`], which callers
+//! handle by re-baselining with a full listing. The etag
 //! gotcha `updateContact` exposes is documented in
 //! [cairn/spec/etags.md](https://github.com/pimalaya/io-gpeople/blob/master/cairn/spec/etags.md).
 //!

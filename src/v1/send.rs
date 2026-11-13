@@ -378,8 +378,9 @@ impl<T: DeserializeOwned> GpeopleCoroutine for GpeopleSend<T> {
                     ..
                 })) => {
                     if response.status.is_success() {
+                        // NOTE: `null` would fail every struct response.
                         let body = if response.body.is_empty() {
-                            b"null".as_slice()
+                            b"{}".as_slice()
                         } else {
                             response.body.as_slice()
                         };

@@ -125,3 +125,12 @@ A logical line longer than 8 KiB is not stashed. `GpeoplePerson::from_vcard` SHA
 
 - **WHEN** a vCard holds a PHOTO line of 10,000 octets and `X-FOO:bar`
 - **THEN** `dropped` is `PHOTO` and the stash holds `X-FOO:bar` alone
+
+### Requirement: An unknown enum value stays on its entry
+
+An enum value the crate does not know (cairn/spec/responses.md) is server data no vCard shows. `GpeoplePerson::to_vcard` SHALL NOT write it: a keyword of unknown type is minted without a TYPE, and a biography of unknown content type is shown as plain text. `GpeoplePerson::merge_unprojected` SHALL keep it on its entry, as a sub-field the vCard cannot show, whether the entry is unchanged, edited or hidden.
+
+#### Scenario: A nickname of unknown type, edited
+
+- **WHEN** the server's only nickname has an unknown type and the vCard changes its value
+- **THEN** the merged nickname holds the new value and the unknown type

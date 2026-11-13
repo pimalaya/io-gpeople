@@ -40,9 +40,9 @@ use alloc::{
 
 use crate::v1::rest::people::{
     GpeopleAddress, GpeopleBiography, GpeopleBirthday, GpeopleClientData, GpeopleContentType,
-    GpeopleDate, GpeopleEmailAddress, GpeopleImClient, GpeopleName, GpeopleNickname,
-    GpeopleOccupation, GpeopleOrganization, GpeoplePerson, GpeoplePersonField, GpeoplePhoneNumber,
-    GpeopleRelation, GpeopleUrl,
+    GpeopleDate, GpeopleEmailAddress, GpeopleImClient, GpeopleMiscKeywordType, GpeopleName,
+    GpeopleNickname, GpeopleOccupation, GpeopleOrganization, GpeoplePerson, GpeoplePersonField,
+    GpeoplePhoneNumber, GpeopleRelation, GpeopleUrl,
 };
 use vcard::{
     param::VcardParam,
@@ -255,7 +255,7 @@ impl GpeoplePerson {
         }
 
         // NOTE: People dates can be partial (year-less birthdays); only a
-        // full date has a portable vCard slot, see project::full_date.
+        // full date is projected, see VcardDateAndOrTime::full_date.
         if let Some(date) = person.birthdays.first().and_then(|birthday| {
             let date = birthday.date.as_ref()?;
             Some(format!(
@@ -1148,8 +1148,8 @@ fn set_first(slot: &mut Option<String>, value: impl AsRef<str>) -> bool {
 /// X-GOOGLE-* lines minted from the read-only Google-scoped fields.
 ///
 /// External ids, keywords and locations mean nothing outside their
-/// account, so they ride as vendor properties (cairn/spec/projection.md).
-/// Memberships are addressbook data (cairn/spec/addressbooks.md), not minted.
+/// account, so they ride as vendor properties. Memberships are addressbook
+/// data, not minted.
 fn minted_props(person: &GpeoplePerson) -> Vec<VcardProp<'static>> {
     let mut lines = Vec::new();
 
@@ -1165,6 +1165,7 @@ fn minted_props(person: &GpeoplePerson) -> Vec<VcardProp<'static>> {
             // canonical People spelling (HOME, OUTLOOK_KEYWORD, ...).
             let keyword_type = keyword
                 .keyword_type
+                .filter(|t| *t != GpeopleMiscKeywordType::Unknown)
                 .and_then(|t| serde_json::to_value(t).ok())
                 .and_then(|v| v.as_str().map(str::to_string));
             lines.push(typed_line("X-GOOGLE-MISC-KEYWORD", &keyword_type, value));
@@ -2323,5 +2324,63 @@ mod tests {
 
         let small = "BEGIN:VCARD\r\nVERSION:4.0\r\nFN:X\r\nX-FOO:bar\r\nEND:VCARD\r\n";
         assert_eq!(GpeoplePerson::from_vcard(small).unwrap().dropped, [""; 0]);
+    }
+
+    #[test]
+    fn an_unknown_enum_value_stays_on_its_entry_and_out_of_the_vcard() {
+        use crate::v1::rest::people::{
+            GpeopleFieldMetadata, GpeopleMiscKeyword, GpeopleMiscKeywordType, GpeopleNicknameType,
+            GpeopleSource, GpeopleSourceType,
+        };
+
+        let source = Some(GpeopleFieldMetadata {
+            source: Some(GpeopleSource {
+                source_type: Some(GpeopleSourceType::Unknown),
+                id: "1".into(),
+                ..Default::default()
+            }),
+            ..Default::default()
+        });
+
+        let mut current = server_person();
+        current.nicknames[0].nickname_type = Some(GpeopleNicknameType::Unknown);
+        current.nicknames[0].metadata = source.clone();
+        current.email_addresses[1].metadata = source;
+        current.biographies[0].content_type = Some(GpeopleContentType::Unknown);
+        current.misc_keywords = vec![GpeopleMiscKeyword {
+            value: Some("vip".into()),
+            keyword_type: Some(GpeopleMiscKeywordType::Unknown),
+            ..Default::default()
+        }];
+
+        let vcard = current.to_vcard();
+        assert!(vcard.contains("X-GOOGLE-MISC-KEYWORD:vip\r\n"), "{vcard}");
+        assert!(!vcard.to_lowercase().contains("unknown"), "{vcard}");
+
+        let mut person = GpeoplePerson::from_vcard(&vcard).unwrap().person;
+        person.merge_unprojected(&current, MANAGED);
+        assert_eq!(person.nicknames, current.nicknames);
+        assert_eq!(person.email_addresses, current.email_addresses);
+        assert_eq!(person.biographies, current.biographies);
+
+        let (person, fields) = update(&current, "NICKNAME:Janie", "NICKNAME:Jay");
+        assert_eq!(fields, [GpeoplePersonField::Nicknames]);
+        assert_eq!(
+            person.nicknames,
+            [GpeopleNickname {
+                value: Some("Jay".into()),
+                ..current.nicknames[0].clone()
+            }]
+        );
+
+        let (person, fields) = update(&current, "NOTE:a note", "NOTE:another note");
+        assert_eq!(fields, [GpeoplePersonField::Biographies]);
+        assert_eq!(
+            person.biographies,
+            [GpeopleBiography {
+                value: Some("another note".into()),
+                ..current.biographies[0].clone()
+            }]
+        );
     }
 }
