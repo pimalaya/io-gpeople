@@ -11,7 +11,6 @@ use alloc::string::String;
 use io_http::rfc6750::bearer::HttpAuthBearer;
 use log::{debug, trace};
 use serde::Serialize;
-use url::Url;
 
 use crate::{
     coroutine::*,
@@ -19,7 +18,7 @@ use crate::{
     v1::{
         query::to_field_mask,
         rest::contact_groups::{GpeopleContactGroup, GpeopleGroupField},
-        send::{GPEOPLE_API_BASE, GpeopleSend, GpeopleSendError, GpeopleSendOutput},
+        send::{GpeopleSend, GpeopleSendError, GpeopleSendOutput, resource_url},
     },
 };
 
@@ -59,7 +58,7 @@ impl GpeopleContactGroupUpdate {
             return Err(err);
         }
 
-        let url = Url::parse(GPEOPLE_API_BASE)?.join(&group.resource_name)?;
+        let url = resource_url("contactGroups", &group.resource_name, "")?;
 
         let request = Request {
             contact_group: group,

@@ -2,18 +2,13 @@
 //!
 //! <https://developers.google.com/people/api/rest/v1/people/deleteContact>
 
-use alloc::format;
-
 use io_http::rfc6750::bearer::HttpAuthBearer;
 use log::{debug, trace};
-use url::Url;
 
 use crate::{
     coroutine::*,
     gpeople_try,
-    v1::send::{
-        GPEOPLE_API_BASE, GpeopleNoResponse, GpeopleSend, GpeopleSendError, GpeopleSendOutput,
-    },
+    v1::send::{GpeopleNoResponse, GpeopleSend, GpeopleSendError, GpeopleSendOutput, resource_url},
 };
 
 /// People REST contact deletion, by full resource name.
@@ -35,7 +30,7 @@ impl GpeopleContactDelete {
             return Err(err);
         }
 
-        let url = Url::parse(GPEOPLE_API_BASE)?.join(&format!("{resource_name}:deleteContact"))?;
+        let url = resource_url("people", resource_name, ":deleteContact")?;
         let send = GpeopleSend::delete(auth, url);
 
         Ok(Self { send })

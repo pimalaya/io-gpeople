@@ -5,13 +5,12 @@
 //!
 //! <https://developers.google.com/people/api/rest/v1/people/updateContactPhoto>
 
-use alloc::{format, string::String, vec::Vec};
+use alloc::{string::String, vec::Vec};
 
 use base64_codec::codec::Base64Codec;
 use io_http::rfc6750::bearer::HttpAuthBearer;
 use log::{debug, trace};
 use serde::{Deserialize, Serialize};
-use url::Url;
 
 use crate::{
     coroutine::*,
@@ -19,7 +18,7 @@ use crate::{
     v1::{
         query::to_field_mask,
         rest::people::{GpeoplePerson, GpeoplePersonField, GpeopleReadSourceType},
-        send::{GPEOPLE_API_BASE, GpeopleSend, GpeopleSendError, GpeopleSendOutput},
+        send::{GpeopleSend, GpeopleSendError, GpeopleSendOutput, resource_url},
     },
 };
 
@@ -75,8 +74,7 @@ impl GpeopleContactPhotoUpdate {
             return Err(err);
         }
 
-        let url =
-            Url::parse(GPEOPLE_API_BASE)?.join(&format!("{resource_name}:updateContactPhoto"))?;
+        let url = resource_url("people", resource_name, ":updateContactPhoto")?;
 
         let request = Request {
             photo_bytes: encode_photo(photo),

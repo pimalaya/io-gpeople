@@ -31,6 +31,38 @@ use crate::coroutine::{GpeopleCoroutine, GpeopleCoroutineState, GpeopleYield};
 /// Base URL for the Google People API v1.
 pub const GPEOPLE_API_BASE: &str = "https://people.googleapis.com/v1/";
 
+/// The People API URL of the `<collection>/<id>` resource name, then `tail`
+/// (a `:method`, a `/sub:method` or nothing), the id one encoded segment.
+pub(crate) fn resource_url(
+    collection: &str,
+    resource_name: &str,
+    tail: &str,
+) -> Result<Url, GpeopleSendError> {
+    let id = resource_name
+        .strip_prefix(collection)
+        .and_then(|name| name.strip_prefix('/'))
+        .filter(|id| !matches!(*id, "" | "." | ".."));
+
+    let Some(id) = id else {
+        let err = format!("Resource name {resource_name:?} is not {collection}/<id>");
+        return Err(GpeopleSendError::InvalidRequest(err));
+    };
+
+    let mut tail = tail.split('/');
+    let last = format!("{id}{}", tail.next().unwrap_or_default());
+
+    let mut url = Url::parse(GPEOPLE_API_BASE)?;
+
+    url.path_segments_mut()
+        .map_err(|()| GpeopleSendError::InvalidRequest(GPEOPLE_API_BASE.to_string()))?
+        .pop_if_empty()
+        .push(collection)
+        .push(&last)
+        .extend(tail);
+
+    Ok(url)
+}
+
 /// Placeholder response type for People API operations that return no body
 /// (e.g. DELETE).
 #[derive(Debug, Clone, Copy, Default, Eq, PartialEq)]

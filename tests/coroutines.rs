@@ -1,31 +1,37 @@
 mod common;
 
-use io_gpeople::v1::{
-    query::{to_field_mask, to_query_pairs},
-    rest::{
-        contact_groups::{
-            GpeopleContactGroup, GpeopleContactGroupType, GpeopleGroupField,
-            create::GpeopleContactGroupCreate,
-            delete::GpeopleContactGroupDelete,
-            list::{GpeopleContactGroupsList, GpeopleContactGroupsListParams},
-            members::modify::GpeopleContactGroupMembersModify,
+use io_gpeople::{
+    coroutine::*,
+    v1::{
+        query::{to_field_mask, to_query_pairs},
+        rest::{
+            contact_groups::{
+                GpeopleContactGroup, GpeopleContactGroupType, GpeopleGroupField,
+                create::GpeopleContactGroupCreate,
+                delete::GpeopleContactGroupDelete,
+                get::GpeopleContactGroupGet,
+                list::{GpeopleContactGroupsList, GpeopleContactGroupsListParams},
+                members::modify::GpeopleContactGroupMembersModify,
+                update::GpeopleContactGroupUpdate,
+            },
+            other_contacts::{
+                copy_other_contact_to_my_contacts_group::GpeopleOtherContactCopy,
+                list::{GpeopleOtherContactsList, GpeopleOtherContactsListParams},
+            },
+            people::{
+                GpeopleName, GpeoplePerson, GpeoplePersonField, GpeopleReadSourceType,
+                connections::list::{GpeopleConnectionsList, GpeopleConnectionsListParams},
+                create_contact::GpeopleContactCreate,
+                delete_contact::GpeopleContactDelete,
+                delete_contact_photo::GpeopleContactPhotoDelete,
+                get::GpeoplePersonGet,
+                search_contacts::GpeopleContactsSearch,
+                update_contact::GpeopleContactUpdate,
+                update_contact_photo::GpeopleContactPhotoUpdate,
+            },
         },
-        other_contacts::{
-            copy_other_contact_to_my_contacts_group::GpeopleOtherContactCopy,
-            list::{GpeopleOtherContactsList, GpeopleOtherContactsListParams},
-        },
-        people::{
-            GpeopleName, GpeoplePerson, GpeoplePersonField, GpeopleReadSourceType,
-            connections::list::{GpeopleConnectionsList, GpeopleConnectionsListParams},
-            create_contact::GpeopleContactCreate,
-            delete_contact::GpeopleContactDelete,
-            get::GpeoplePersonGet,
-            search_contacts::GpeopleContactsSearch,
-            update_contact::GpeopleContactUpdate,
-            update_contact_photo::GpeopleContactPhotoUpdate,
-        },
+        send::{GpeopleApiError, GpeopleSendError, parse_api_error},
     },
-    send::{GpeopleApiError, GpeopleSendError, parse_api_error},
 };
 use io_http::rfc6750::bearer::HttpAuthBearer;
 
@@ -33,6 +39,16 @@ use common::{empty_response, json_response, run};
 
 fn auth() -> HttpAuthBearer {
     HttpAuthBearer::new("fake-token")
+}
+
+/// The method and path a coroutine requests, its query left out.
+fn request_path<C: GpeopleCoroutine<Yield = GpeopleYield>>(mut coroutine: C) -> String {
+    let (_, written) = run(&mut coroutine, &empty_response("HTTP/1.1 200 OK"));
+    let request = String::from_utf8_lossy(&written);
+    let line = request.lines().next().unwrap_or_default();
+    let target = line.strip_suffix(" HTTP/1.1").unwrap_or(line);
+
+    target.split('?').next().unwrap_or_default().to_string()
 }
 
 #[test]
@@ -401,6 +417,104 @@ fn copies_other_contact() {
         request.contains(r#""copyMask":"names,emailAddresses""#),
         "got: {request}"
     );
+}
+
+#[test]
+fn a_resource_name_adds_no_query() {
+    let response = empty_response("HTTP/1.1 200 OK");
+    let name = "contactGroups/abc?deleteContacts=true";
+    let mut coroutine = GpeopleContactGroupDelete::new(&auth(), name, false).unwrap();
+    let (_, written) = run(&mut coroutine, &response);
+
+    let request = String::from_utf8_lossy(&written);
+    assert!(
+        request.starts_with("DELETE /v1/contactGroups/abc%3FdeleteContacts=true HTTP/1.1\r\n"),
+        "got: {request}"
+    );
+}
+
+#[test]
+fn a_resource_id_is_one_path_segment() {
+    let auth = auth();
+    let fields = [GpeoplePersonField::Names];
+    let id = "x?a=1#b/../c\\d";
+    let segment = "x%3Fa=1%23b%2F..%2Fc%5Cd";
+
+    let person_name = format!("people/{id}");
+    let person = GpeoplePerson {
+        resource_name: person_name.clone(),
+        ..Default::default()
+    };
+    let group_name = format!("contactGroups/{id}");
+    let group = GpeopleContactGroup {
+        resource_name: group_name.clone(),
+        ..Default::default()
+    };
+    let other_name = format!("otherContacts/{id}");
+    let members = ["people/c1".to_string()];
+
+    let paths = [
+        request_path(GpeoplePersonGet::new(&auth, &person_name, &fields, &[]).unwrap()),
+        request_path(GpeopleContactUpdate::new(&auth, &person, &fields, &[], &[]).unwrap()),
+        request_path(GpeopleContactDelete::new(&auth, &person_name).unwrap()),
+        request_path(GpeopleContactPhotoUpdate::new(&auth, &person_name, &[1], &[], &[]).unwrap()),
+        request_path(GpeopleContactPhotoDelete::new(&auth, &person_name, &[], &[]).unwrap()),
+        request_path(GpeopleContactGroupGet::new(&auth, &group_name, None, &[]).unwrap()),
+        request_path(GpeopleContactGroupUpdate::new(&auth, &group, &[], &[]).unwrap()),
+        request_path(GpeopleContactGroupDelete::new(&auth, &group_name, false).unwrap()),
+        request_path(
+            GpeopleContactGroupMembersModify::new(&auth, &group_name, &members, &[]).unwrap(),
+        ),
+        request_path(GpeopleOtherContactCopy::new(&auth, &other_name, &fields, &[], &[]).unwrap()),
+    ];
+
+    assert_eq!(
+        paths,
+        [
+            format!("GET /v1/people/{segment}"),
+            format!("PATCH /v1/people/{segment}:updateContact"),
+            format!("DELETE /v1/people/{segment}:deleteContact"),
+            format!("PATCH /v1/people/{segment}:updateContactPhoto"),
+            format!("DELETE /v1/people/{segment}:deleteContactPhoto"),
+            format!("GET /v1/contactGroups/{segment}"),
+            format!("PUT /v1/contactGroups/{segment}"),
+            format!("DELETE /v1/contactGroups/{segment}"),
+            format!("POST /v1/contactGroups/{segment}/members:modify"),
+            format!("POST /v1/otherContacts/{segment}:copyOtherContactToMyContactsGroup"),
+        ]
+    );
+}
+
+#[test]
+fn rejects_a_resource_name_outside_its_collection() {
+    let names = [
+        "c1",
+        "people",
+        "people/",
+        "people/.",
+        "people/..",
+        "../people/c1",
+        "/people/c1",
+        "//evil.example/people/c1",
+        "https://evil.example/v1/people/c1",
+        "peoplex/c1",
+        "contactGroups/abc",
+    ];
+
+    for name in names {
+        let result = GpeopleContactDelete::new(&auth(), name);
+        assert!(
+            matches!(result, Err(GpeopleSendError::InvalidRequest(_))),
+            "accepted {name:?}"
+        );
+    }
+
+    let result = GpeopleContactGroupDelete::new(&auth(), "people/c1", true);
+    assert!(matches!(result, Err(GpeopleSendError::InvalidRequest(_))));
+
+    let fields = [GpeoplePersonField::Names];
+    let result = GpeopleOtherContactCopy::new(&auth(), "people/c1", &fields, &[], &[]);
+    assert!(matches!(result, Err(GpeopleSendError::InvalidRequest(_))));
 }
 
 #[test]

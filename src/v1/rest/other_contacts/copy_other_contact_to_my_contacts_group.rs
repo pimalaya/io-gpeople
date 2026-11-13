@@ -3,12 +3,11 @@
 //!
 //! <https://developers.google.com/people/api/rest/v1/otherContacts/copyOtherContactToMyContactsGroup>
 
-use alloc::{format, string::String};
+use alloc::string::String;
 
 use io_http::rfc6750::bearer::HttpAuthBearer;
 use log::{debug, trace};
 use serde::Serialize;
-use url::Url;
 
 use crate::{
     coroutine::*,
@@ -16,7 +15,7 @@ use crate::{
     v1::{
         query::to_field_mask,
         rest::people::{GpeoplePerson, GpeoplePersonField, GpeopleReadSourceType},
-        send::{GPEOPLE_API_BASE, GpeopleSend, GpeopleSendError, GpeopleSendOutput},
+        send::{GpeopleSend, GpeopleSendError, GpeopleSendOutput, resource_url},
     },
 };
 
@@ -68,9 +67,8 @@ impl GpeopleOtherContactCopy {
             return Err(err);
         }
 
-        let url = Url::parse(GPEOPLE_API_BASE)?.join(&format!(
-            "{resource_name}:copyOtherContactToMyContactsGroup"
-        ))?;
+        let tail = ":copyOtherContactToMyContactsGroup";
+        let url = resource_url("otherContacts", resource_name, tail)?;
 
         let request = Request {
             copy_mask: to_field_mask(copy_mask),

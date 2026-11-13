@@ -4,14 +4,11 @@
 
 use io_http::rfc6750::bearer::HttpAuthBearer;
 use log::{debug, trace};
-use url::Url;
 
 use crate::{
     coroutine::*,
     gpeople_try,
-    v1::send::{
-        GPEOPLE_API_BASE, GpeopleNoResponse, GpeopleSend, GpeopleSendError, GpeopleSendOutput,
-    },
+    v1::send::{GpeopleNoResponse, GpeopleSend, GpeopleSendError, GpeopleSendOutput, resource_url},
 };
 
 /// People REST contact group deletion, optionally deleting its contacts
@@ -38,7 +35,7 @@ impl GpeopleContactGroupDelete {
             return Err(err);
         }
 
-        let mut url = Url::parse(GPEOPLE_API_BASE)?.join(resource_name)?;
+        let mut url = resource_url("contactGroups", resource_name, "")?;
 
         if delete_contacts {
             url.query_pairs_mut().append_pair("deleteContacts", "true");

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed `GpeoplePerson::from_vcard` and `GpeoplePerson::to_vcard` truncating a folded unmanaged property.
+
+  The stash holds logical lines, and a stash stored with its folds reads back whole, the UID behind `GpeoplePerson::stashed_uid` included.
+
+### Security
+
+- Fixed `GpeoplePerson::to_vcard` writing a line break held by a URL or an IM client as a vCard line break.
+
+  Control characters of URL and IMPP values are percent-encoded.
+
+- Fixed the coroutines taking a resource name joining it as a relative URL reference.
+
+  The id is one percent-encoded path segment, and a name outside the coroutine's collection (`people`, `contactGroups` or `otherContacts`) fails with `GpeopleSendError::InvalidRequest`.
+
 ## [0.6.0] - 2026-11-04
 
 ### Changed

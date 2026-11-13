@@ -9,11 +9,8 @@
 //!
 //! <https://developers.google.com/people/api/rest/v1/people/updateContact>
 
-use alloc::format;
-
 use io_http::rfc6750::bearer::HttpAuthBearer;
 use log::{debug, trace};
-use url::Url;
 
 use crate::{
     coroutine::*,
@@ -21,7 +18,7 @@ use crate::{
     v1::{
         query::{to_field_mask, to_field_pairs},
         rest::people::{GpeoplePerson, GpeoplePersonField, GpeopleReadSourceType},
-        send::{GPEOPLE_API_BASE, GpeopleSend, GpeopleSendError, GpeopleSendOutput},
+        send::{GpeopleSend, GpeopleSendError, GpeopleSendOutput, resource_url},
     },
 };
 
@@ -62,8 +59,7 @@ impl GpeopleContactUpdate {
             return Err(err);
         }
 
-        let mut url = Url::parse(GPEOPLE_API_BASE)?
-            .join(&format!("{}:updateContact", person.resource_name))?;
+        let mut url = resource_url("people", &person.resource_name, ":updateContact")?;
 
         {
             let mut pairs = url.query_pairs_mut();

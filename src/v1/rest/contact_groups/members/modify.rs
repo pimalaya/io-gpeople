@@ -6,17 +6,16 @@
 //!
 //! <https://developers.google.com/people/api/rest/v1/contactGroups.members/modify>
 
-use alloc::{format, string::String, vec::Vec};
+use alloc::{string::String, vec::Vec};
 
 use io_http::rfc6750::bearer::HttpAuthBearer;
 use log::{debug, trace};
 use serde::{Deserialize, Serialize};
-use url::Url;
 
 use crate::{
     coroutine::*,
     gpeople_try,
-    v1::send::{GPEOPLE_API_BASE, GpeopleSend, GpeopleSendError, GpeopleSendOutput},
+    v1::send::{GpeopleSend, GpeopleSendError, GpeopleSendOutput, resource_url},
 };
 
 /// People REST contact group members modification response (the person
@@ -75,7 +74,7 @@ impl GpeopleContactGroupMembersModify {
             return Err(err);
         }
 
-        let url = Url::parse(GPEOPLE_API_BASE)?.join(&format!("{resource_name}/members:modify"))?;
+        let url = resource_url("contactGroups", resource_name, "/members:modify")?;
 
         let request = Request {
             resource_names_to_add,

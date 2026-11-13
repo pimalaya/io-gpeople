@@ -21,7 +21,10 @@
 //! Unlike Graph's fixed slots, People fields are true lists, so every
 //! vCard property projects without truncation.
 
-use core::{fmt, str::FromStr};
+use core::{
+    fmt::{self, Write},
+    str::FromStr,
+};
 
 use alloc::{
     borrow::Cow,
@@ -189,7 +192,7 @@ impl GpeoplePerson {
                     group: None,
                     name: VcardPropName::Kind(VcardPropKind::Impp),
                     params: vec![],
-                    value: VcardValue::Uri(VcardUri(Cow::Owned(uri))),
+                    value: uri_value(&uri),
                 });
             }
         }
@@ -243,7 +246,7 @@ impl GpeoplePerson {
                     group: None,
                     name: VcardPropName::Kind(VcardPropKind::Url),
                     params: vec![],
-                    value: VcardValue::Uri(VcardUri(Cow::Owned(page.to_string()))),
+                    value: uri_value(page),
                 });
             }
         }
@@ -566,8 +569,13 @@ impl GpeoplePerson {
             };
 
             if !consumed {
-                let raw = line.to_string();
-                let raw = raw.trim_end().to_string();
+                // NOTE: Display would replay the folds the line arrived with.
+                let mut raw = line.name.get().to_string();
+                for param in &line.params {
+                    let _ = write!(raw, ";{param}");
+                }
+                let _ = write!(raw, ":{}", line.value);
+
                 if raw.len() <= MAX_STASH_LINE {
                     stash.push(raw);
                 }
@@ -765,6 +773,25 @@ fn related_prop(r#type: &'static str, name: &str) -> VcardProp<'static> {
     }
 }
 
+/// A URI value, its control characters percent-encoded.
+///
+/// A URI is written unescaped, so a raw line break would end its line.
+fn uri_value(uri: &str) -> VcardValue<'static> {
+    let mut value = String::with_capacity(uri.len());
+
+    for c in uri.chars() {
+        if c.is_control() {
+            for byte in c.encode_utf8(&mut [0; 4]).bytes() {
+                let _ = write!(value, "%{byte:02X}");
+            }
+        } else {
+            value.push(c);
+        }
+    }
+
+    VcardValue::Uri(VcardUri(Cow::Owned(value)))
+}
+
 /// A single-value TYPE parameter.
 fn type_param(value: &'static str) -> VcardParam<'static> {
     VcardParam::Type(vec![Cow::Borrowed(value)])
@@ -920,17 +947,42 @@ impl GpeoplePerson {
     }
 }
 
-/// The stashed vCard lines behind the cardamum clientData entry.
+/// The stashed logical vCard lines behind the cardamum clientData entry.
+///
+/// A stash stored with its folds has them joined back, as unfolding does.
 fn stash_lines(person: &GpeoplePerson) -> Vec<String> {
-    person
+    let stashes = person
         .client_data
         .iter()
         .filter(|entry| entry.key.as_deref() == Some(GPEOPLE_PERSON_STASH_KEY))
-        .filter_map(|entry| entry.value.as_deref())
-        .flat_map(|value| value.split('\n'))
-        .filter(|line| !line.is_empty())
-        .map(str::to_string)
-        .collect()
+        .filter_map(|entry| entry.value.as_deref());
+
+    let mut lines: Vec<String> = Vec::new();
+
+    for stash in stashes {
+        // NOTE: a blank row ends the line before it, as it does in a card.
+        let mut open = false;
+
+        for row in stash.split('\n') {
+            match lines.last_mut() {
+                Some(line) if open && row.starts_with([' ', '\t']) => {
+                    if line.ends_with('\r') {
+                        line.pop();
+                    }
+                    line.push_str(&row[1..]);
+                }
+                _ => {
+                    let row = row.trim_start_matches([' ', '\t']);
+                    open = !row.trim_end_matches('\r').is_empty();
+                    if open {
+                        lines.push(row.to_string());
+                    }
+                }
+            }
+        }
+    }
+
+    lines
 }
 
 /// The structured-value components joined into one People field.
@@ -1301,5 +1353,212 @@ mod tests {
 
         assert_eq!(person.stashed_uid(), None);
         assert!(person.to_vcard().contains("UID:c123\r\n"));
+    }
+
+    /// A person holding only the stash `value`, as People hands it back.
+    fn stashed(value: String) -> GpeoplePerson {
+        GpeoplePerson {
+            client_data: vec![GpeopleClientData {
+                key: Some(GPEOPLE_PERSON_STASH_KEY.into()),
+                value: Some(value),
+                ..Default::default()
+            }],
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn stash_keeps_a_folded_property_whole() {
+        let long = format!("X-CUSTOM-FIELD:{}", "abcdefghij".repeat(15));
+        let vcard = format!(
+            "BEGIN:VCARD\r\nVERSION:4.0\r\nFN:X\r\n{}\r\n {}\r\n {}\r\nX-SHORT:kept\r\n\
+             END:VCARD\r\n",
+            &long[..75],
+            &long[75..149],
+            &long[149..],
+        );
+
+        let person = GpeoplePerson::from_vcard(&vcard).unwrap();
+        assert_eq!(
+            person.client_data[0].value,
+            Some(format!("{long}\nX-SHORT:kept"))
+        );
+
+        let restored = person.to_vcard().replace("\r\n ", "");
+        assert!(restored.contains(&format!("\r\n{long}\r\nX-SHORT:kept\r\n")));
+    }
+
+    #[test]
+    fn a_folded_uid_rides_the_stash_whole() {
+        let uid = "040000008200E00074C5B7101A82E00800000000".repeat(3);
+        let vcard = format!(
+            "BEGIN:VCARD\r\nVERSION:4.0\r\nUID:{}\r\n {}\r\nFN:X\r\nEND:VCARD\r\n",
+            &uid[..71],
+            &uid[71..],
+        );
+
+        let person = GpeoplePerson::from_vcard(&vcard).unwrap();
+        assert_eq!(person.stashed_uid(), Some(uid));
+    }
+
+    #[test]
+    fn a_stash_stored_with_its_folds_reads_back_whole() {
+        let long = format!("X-CUSTOM-FIELD:{}", "abcdefghij".repeat(15));
+        let stored = format!(
+            "{}\r\n {}\r\n\t{}\nGENDER:F",
+            &long[..75],
+            &long[75..149],
+            &long[149..],
+        );
+
+        let person = stashed(stored);
+        assert_eq!(stash_lines(&person), [long.as_str(), "GENDER:F"]);
+
+        let restored = person.to_vcard().replace("\r\n ", "");
+        assert!(restored.contains(&format!("\r\n{long}\r\nGENDER:F\r\n")));
+    }
+
+    #[test]
+    fn a_stored_blank_line_ends_the_line_before_it() {
+        let person = stashed("GENDER:F\n\r\n X-FOO:a\n\n\tX-BAR:b".into());
+        assert_eq!(stash_lines(&person), ["GENDER:F", "X-FOO:a", "X-BAR:b"]);
+    }
+
+    /// A xorshift generator: random cases, the same on every run.
+    struct Cases(u64);
+
+    impl Cases {
+        fn below(&mut self, bound: usize) -> usize {
+            self.0 ^= self.0 << 13;
+            self.0 ^= self.0 >> 7;
+            self.0 ^= self.0 << 17;
+            (self.0 % bound as u64) as usize
+        }
+
+        fn pick<T: Copy>(&mut self, items: &[T]) -> T {
+            items[self.below(items.len())]
+        }
+
+        /// An unmanaged logical line: any name, parameters and value.
+        fn line(&mut self) -> String {
+            const NAMES: &[&str] = &[
+                "UID",
+                "GENDER",
+                "CATEGORIES",
+                "KEY",
+                "PHOTO",
+                "GEO",
+                "x-lower",
+                "item1.X-ABLABEL",
+            ];
+            const PARAMS: &[&str] = &[
+                "",
+                ";TYPE=a,b",
+                ";VALUE=uri",
+                ";LANGUAGE=fr;PREF=1",
+                ";X-P=\"quoted; with: marks\"",
+                ";X-P=é日",
+            ];
+            const NAME_CHARS: &[char] = &['A', 'z', '0', '9', '-'];
+            const VALUE_CHARS: &[char] = &[
+                'a', 'Z', '0', ' ', '\t', ';', ',', ':', '\\', '"', '=', '-', 'é', 'ß', '日', '本',
+                '😀',
+            ];
+
+            let mut line = match self.below(2) {
+                0 => self.pick(NAMES).to_string(),
+                _ => {
+                    let len = 1 + self.below(40);
+                    let name = (0..len).map(|_| self.pick(NAME_CHARS));
+                    format!("X-{}", name.collect::<String>())
+                }
+            };
+
+            line.push_str(self.pick(PARAMS));
+            line.push(':');
+
+            let len = self.pick(&[0, 1, 8, 60, 75, 150, 400]);
+            let len = self.below(len + 1);
+            line.extend((0..len).map(|_| self.pick(VALUE_CHARS)));
+
+            line
+        }
+
+        /// `line` as it travels: folded at any char, any number of times.
+        fn fold(&mut self, line: &str, eol: &str) -> String {
+            let every = self.pick(&[1, 3, 20, 75, 1000]);
+            let mut folded = String::new();
+
+            for (i, c) in line.chars().enumerate() {
+                if i > 0 && self.below(every) == 0 {
+                    folded.push_str(eol);
+                    folded.push(self.pick(&[' ', '\t']));
+                }
+                folded.push(c);
+            }
+
+            folded
+        }
+    }
+
+    #[test]
+    fn stash_round_trips_any_property() {
+        let mut cases = Cases(0x9E37_79B9_7F4A_7C15);
+
+        for case in 0..2000 {
+            let eol = cases.pick(&["\r\n", "\n"]);
+            let lines: Vec<String> = (0..1 + cases.below(4)).map(|_| cases.line()).collect();
+            let folded: Vec<String> = lines.iter().map(|line| cases.fold(line, eol)).collect();
+            let vcard = format!(
+                "BEGIN:VCARD{eol}VERSION:4.0{eol}FN:X{eol}{}{eol}END:VCARD{eol}",
+                folded.join(eol),
+            );
+
+            let person = GpeoplePerson::from_vcard(&vcard).unwrap();
+            assert_eq!(stash_lines(&person), lines, "case {case}: {vcard:?}");
+
+            let restored = person.to_vcard();
+            let unfolded = restored.replace("\r\n ", "");
+            for line in &lines {
+                let line = format!("\r\n{line}\r\n");
+                assert!(unfolded.contains(&line), "case {case}: {restored:?}");
+            }
+
+            let back = GpeoplePerson::from_vcard(&restored).unwrap();
+            assert_eq!(back, person, "case {case}: {restored:?}");
+
+            // NOTE: the shape stored before the stash held logical lines.
+            let stored: Vec<&str> = folded.iter().map(|line| line.trim_end()).collect();
+            let legacy = stashed(stored.join("\n"));
+            let trimmed: Vec<&str> = lines.iter().map(|line| line.trim_end()).collect();
+            assert_eq!(stash_lines(&legacy), trimmed, "case {case}: {stored:?}");
+        }
+    }
+
+    #[test]
+    fn a_line_break_in_a_url_adds_no_vcard_line() {
+        let mut person = full_person();
+        person.urls[0].value = Some("https://doe.org/\r\nTEL:+339999\nX-INJECTED:1".into());
+
+        let vcard = person.to_vcard();
+        let back = GpeoplePerson::from_vcard(&vcard).unwrap();
+        assert_eq!(back.phone_numbers, person.phone_numbers);
+        assert_eq!(back.client_data, []);
+
+        assert!(vcard.contains("URL:https://doe.org/%0D%0ATEL:+339999%0AX-INJECTED:1\r\n"));
+    }
+
+    #[test]
+    fn a_line_break_in_an_im_client_adds_no_vcard_line() {
+        let mut person = full_person();
+        person.im_clients[0].username = Some("jane\r\nTEL:+339999".into());
+        person.im_clients[0].protocol = Some("xmpp\nX-INJECTED:1".into());
+
+        let vcard = person.to_vcard();
+        let back = GpeoplePerson::from_vcard(&vcard).unwrap();
+        assert_eq!(back.phone_numbers, person.phone_numbers);
+        assert_eq!(back.client_data, []);
+
+        assert!(vcard.contains("IMPP:xmpp%0AX-INJECTED:1:jane%0D%0ATEL:+339999\r\n"));
     }
 }

@@ -6,7 +6,6 @@ use alloc::string::ToString;
 
 use io_http::rfc6750::bearer::HttpAuthBearer;
 use log::{debug, trace};
-use url::Url;
 
 use crate::{
     coroutine::*,
@@ -14,7 +13,7 @@ use crate::{
     v1::{
         query::to_field_mask,
         rest::contact_groups::{GpeopleContactGroup, GpeopleGroupField},
-        send::{GPEOPLE_API_BASE, GpeopleSend, GpeopleSendError, GpeopleSendOutput},
+        send::{GpeopleSend, GpeopleSendError, GpeopleSendOutput, resource_url},
     },
 };
 
@@ -43,7 +42,7 @@ impl GpeopleContactGroupGet {
             return Err(err);
         }
 
-        let mut url = Url::parse(GPEOPLE_API_BASE)?.join(resource_name)?;
+        let mut url = resource_url("contactGroups", resource_name, "")?;
 
         {
             let mut pairs = url.query_pairs_mut();
