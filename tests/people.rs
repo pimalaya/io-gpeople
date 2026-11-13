@@ -294,10 +294,17 @@ fn contact_group(client: &mut GpeopleClientStd, tag: &str, leftovers: &mut Lefto
         "created group name mismatch"
     );
 
-    let fetched = client
-        .contact_group_get(&name, None, &[])
-        .expect("contact group get")
-        .response;
+    // NOTE: a group may answer 404 for a moment after its creation.
+    let mut attempts = 0;
+    let fetched = loop {
+        attempts += 1;
+
+        match client.contact_group_get(&name, None, &[]) {
+            Ok(out) => break out.response,
+            Err(_) if attempts < 10 => thread::sleep(Duration::from_secs(1)),
+            Err(err) => panic!("contact group get: {err:?}"),
+        }
+    };
     assert_eq!(
         fetched.resource_name, name,
         "contact group get resource name mismatch"
