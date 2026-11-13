@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-13
+
 ### Added
 
 - Added `GpeoplePerson::merge_unprojected`.
@@ -178,7 +180,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the I/O-free coroutines for the Google People API v1: people, connections, contact groups and other contacts.
 - Added `PeopleClientStd`, a std blocking client behind the `client` feature.
 
-[unreleased]: https://github.com/pimalaya/io-gpeople/compare/v0.6.0..HEAD
+[unreleased]: https://github.com/pimalaya/io-gpeople/compare/v0.7.0..HEAD
+[0.7.0]: https://github.com/pimalaya/io-gpeople/compare/v0.6.0..v0.7.0
 [0.6.0]: https://github.com/pimalaya/io-gpeople/compare/v0.5.0..v0.6.0
 [0.5.0]: https://github.com/pimalaya/io-gpeople/compare/v0.4.2..v0.5.0
 [0.4.2]: https://github.com/pimalaya/io-gpeople/compare/v0.4.1..v0.4.2
