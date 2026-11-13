@@ -7,11 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added `GpeoplePerson::merge_unprojected`.
+
+  Called with the server's person and the update mask before an update built from a vCard, it keeps in each masked field what the vCard does not show and the update would erase: other relations, further organizations and occupations, custom types, sub-fields without a vCard slot, the client data of other clients.
+
+- Added `GpeoplePersonVcard`, a person projected from a vCard with the names of the properties too long for the stash.
+
+### Changed
+
+- Changed `GpeoplePerson::from_vcard` to return a `GpeoplePersonVcard`. **Breaking change.**
+
+  The person is its `person` field, and `dropped` names the lines over 8 KiB the stash does not hold.
+
 ### Fixed
 
 - Fixed `GpeoplePerson::from_vcard` and `GpeoplePerson::to_vcard` truncating a folded unmanaged property.
 
   The stash holds logical lines, and a stash stored with its folds reads back whole, the UID behind `GpeoplePerson::stashed_uid` included.
+
+- Fixed `GpeoplePerson::from_vcard` stashing the empty `FN` of a person without a name.
+
+  The stash no longer gains one `FN:` line per round trip, and a stashed one is not restored.
 
 ### Security
 

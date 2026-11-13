@@ -16,7 +16,10 @@
 //!   ([`GPEOPLE_PERSON_STASH_KEY`]), and is spliced back verbatim on read;
 //! - People-only fields (fileAses, memberships, events, photos) stay out
 //!   of the managed set and of every update mask, and survive untouched.
-//!   A read that projects passes [`GPEOPLE_PERSON_VCARD_FIELDS`].
+//!   A read that projects passes [`GPEOPLE_PERSON_VCARD_FIELDS`];
+//! - a managed field holds more than its vCard shows (other relations, a
+//!   second organization, custom types), and an update replaces it whole:
+//!   [`GpeoplePerson::merge_unprojected`] re-attaches the rest first.
 //!
 //! Unlike Graph's fixed slots, People fields are true lists, so every
 //! vCard property projects without truncation.
@@ -297,8 +300,9 @@ impl GpeoplePerson {
             card.push(prop);
         }
 
+        // NOTE: an empty FN was once stashed for a person without a name.
         let stash = stash_lines(person);
-        for line in &stash {
+        for line in stash.iter().filter(|line| line.as_str() != "FN:") {
             // NOTE: a line that no longer tokenises restores nothing rather
             // than corrupting the card.
             let _ = card.push_raw(line);
@@ -313,8 +317,9 @@ impl GpeoplePerson {
     /// drops the property, which clears the masked field on update. Lines
     /// that do not project are stashed in clientData and restore on read,
     /// the UID among them, People having no UID field: that is what keeps a
-    /// person's identity across a sync with another source.
-    pub fn from_vcard(vcard: &str) -> Result<Self, GpeoplePersonVcardError> {
+    /// person's identity across a sync with another source. A line too long
+    /// for the stash is named in [`GpeoplePersonVcard::dropped`].
+    pub fn from_vcard(vcard: &str) -> Result<GpeoplePersonVcard, GpeoplePersonVcardError> {
         let card = VcardCst::parse(vcard).map_err(GpeoplePersonVcardError::Parse)?;
         let version = card.version();
 
@@ -323,6 +328,7 @@ impl GpeoplePerson {
         let mut org = GpeopleOrganization::default();
         let mut notes = Vec::new();
         let mut stash = Vec::new();
+        let mut dropped = Vec::new();
         let mut name_seen = false;
 
         for line in &card.props {
@@ -338,8 +344,10 @@ impl GpeoplePerson {
                             .any(|prop| raw_name.eq_ignore_ascii_case(prop))
                 }
                 Ok(VcardPropKind::Fn) => {
+                    // NOTE: an empty FN is the one a nameless person gets.
                     let value = FN::decode(line, version);
-                    set_first(&mut name.unstructured_name, &value.0)
+                    let empty = value.0.trim().is_empty();
+                    set_first(&mut name.unstructured_name, &value.0) || empty
                 }
                 Ok(VcardPropKind::N) => {
                     if !name_seen {
@@ -578,6 +586,8 @@ impl GpeoplePerson {
 
                 if raw.len() <= MAX_STASH_LINE {
                     stash.push(raw);
+                } else {
+                    dropped.push(property_name(&raw));
                 }
             }
         }
@@ -612,7 +622,7 @@ impl GpeoplePerson {
             });
         }
 
-        Ok(person)
+        Ok(GpeoplePersonVcard { person, dropped })
     }
 
     /// The stashed properties `base` carries and this person cannot remove.
@@ -668,12 +678,277 @@ impl GpeoplePerson {
 
         fields
     }
+
+    /// Re-attaches what this person, built from a vCard, cannot hold of
+    /// `current`, in each field of the update mask `fields`.
+    ///
+    /// An update replaces a masked field whole, so the entries and sub-fields
+    /// a vCard does not show would be erased. Call it once the mask is known.
+    pub fn merge_unprojected(&mut self, current: &Self, fields: &[GpeoplePersonField]) {
+        macro_rules! overlay {
+            ($($facet:ident),+) => {
+                |kept, ours, shown| {$(
+                    if ours.$facet != shown.$facet {
+                        kept.$facet = ours.$facet.clone();
+                    }
+                )+}
+            };
+        }
+
+        macro_rules! merge_list {
+            ($list:ident, first: $first:expr, $same:expr, $($facet:ident),+) => {
+                merge_list(
+                    &mut self.$list,
+                    &current.$list,
+                    |i, entry| {
+                        let hidden = $first && i > 0;
+                        (!hidden).then(|| shown(entry, |person| &mut person.$list))?
+                    },
+                    $same,
+                    overlay!($($facet),+),
+                )
+            };
+        }
+
+        macro_rules! merge_one {
+            ($list:ident, $theirs:expr, $($facet:ident),+) => {{
+                let theirs = $theirs;
+                let shown = theirs.and_then(|entry| shown(entry, |person| &mut person.$list));
+                merge_one(&mut self.$list, theirs, shown, overlay!($($facet),+))
+            }};
+        }
+
+        for field in fields {
+            match field {
+                GpeoplePersonField::Addresses => merge_list!(
+                    addresses,
+                    first: false,
+                    |_, _| false,
+                    po_box,
+                    extended_address,
+                    street_address,
+                    city,
+                    region,
+                    postal_code,
+                    country,
+                    address_type
+                ),
+                GpeoplePersonField::Biographies => merge_one!(
+                    biographies,
+                    current
+                        .biographies
+                        .iter()
+                        .find(|bio| bio.content_type != Some(GpeopleContentType::TextHtml)),
+                    value,
+                    content_type
+                ),
+                GpeoplePersonField::Birthdays => {
+                    merge_one!(birthdays, current.birthdays.first(), date)
+                }
+                GpeoplePersonField::ClientData => {
+                    let others = current
+                        .client_data
+                        .iter()
+                        .filter(|entry| entry.key.as_deref() != Some(GPEOPLE_PERSON_STASH_KEY));
+
+                    for entry in others {
+                        if !self.client_data.contains(entry) {
+                            self.client_data.push(entry.clone());
+                        }
+                    }
+                }
+                GpeoplePersonField::EmailAddresses => merge_list!(
+                    email_addresses,
+                    first: false,
+                    |ours, shown| ours.value == shown.value,
+                    value,
+                    email_type
+                ),
+                GpeoplePersonField::ImClients => merge_list!(
+                    im_clients,
+                    first: false,
+                    |ours, shown| ours.username == shown.username,
+                    username,
+                    protocol
+                ),
+                GpeoplePersonField::Names => merge_one!(
+                    names,
+                    current.names.first(),
+                    unstructured_name,
+                    family_name,
+                    given_name,
+                    middle_name,
+                    honorific_prefix,
+                    honorific_suffix
+                ),
+                GpeoplePersonField::Nicknames => merge_list!(
+                    nicknames,
+                    first: false,
+                    |ours, shown| ours.value == shown.value,
+                    value
+                ),
+                GpeoplePersonField::Occupations => {
+                    merge_list!(occupations, first: true, |_, _| false, value)
+                }
+                GpeoplePersonField::Organizations => merge_list!(
+                    organizations,
+                    first: true,
+                    |_, _| false,
+                    name,
+                    department,
+                    title
+                ),
+                GpeoplePersonField::PhoneNumbers => merge_list!(
+                    phone_numbers,
+                    first: false,
+                    |ours, shown| ours.value == shown.value,
+                    value,
+                    phone_type
+                ),
+                GpeoplePersonField::Relations => merge_list!(
+                    relations,
+                    first: false,
+                    |ours, shown| ours.person == shown.person,
+                    person,
+                    relation_type
+                ),
+                GpeoplePersonField::Urls => merge_list!(
+                    urls,
+                    first: false,
+                    |ours, shown| ours.value == shown.value,
+                    value
+                ),
+                _ => {}
+            }
+        }
+    }
 }
 
 /// The property name of a stashed vCard line, up to its first `;` or `:`.
 fn property_name(line: &str) -> String {
     let end = line.find([';', ':']).unwrap_or(line.len());
     line[..end].to_uppercase()
+}
+
+/// A server entry as its vCard reads back, None when the vCard hides it.
+fn shown<T: Clone>(entry: &T, list: fn(&mut GpeoplePerson) -> &mut Vec<T>) -> Option<T> {
+    let mut alone = GpeoplePerson::default();
+    list(&mut alone).push(entry.clone());
+
+    let mut back = GpeoplePerson::from_vcard(&alone.to_vcard()).ok()?.person;
+    list(&mut back).pop()
+}
+
+/// Merges the server list `theirs` into `ours`, the list a vCard gave.
+///
+/// An entry of `ours` is paired with the server entry it shows (the same
+/// projection, else the same key, else the only one left on each side) and
+/// keeps what that entry holds beyond the vCard. Hidden entries follow.
+fn merge_list<T: Clone + PartialEq>(
+    ours: &mut Vec<T>,
+    theirs: &[T],
+    shown: impl Fn(usize, &T) -> Option<T>,
+    same: impl Fn(&T, &T) -> bool,
+    overlay: impl Fn(&mut T, &T, &T),
+) {
+    let shown: Vec<Option<T>> = theirs
+        .iter()
+        .enumerate()
+        .map(|(i, entry)| shown(i, entry))
+        .collect();
+
+    let mut pairs: Vec<Option<usize>> = vec![None; ours.len()];
+    let mut paired = vec![false; theirs.len()];
+
+    for exact in [true, false] {
+        for (entry, pair) in ours.iter().zip(&mut pairs) {
+            if pair.is_some() {
+                continue;
+            }
+
+            *pair = shown.iter().enumerate().position(|(i, shown)| {
+                let Some(shown) = shown else {
+                    return false;
+                };
+
+                !paired[i] && (exact && entry == shown || !exact && same(entry, shown))
+            });
+
+            if let Some(i) = *pair {
+                paired[i] = true;
+            }
+        }
+    }
+
+    let mut left_ours = (0..pairs.len()).filter(|&j| pairs[j].is_none());
+    let mut left_theirs = (0..theirs.len()).filter(|&i| shown[i].is_some() && !paired[i]);
+
+    let left = (
+        left_ours.next(),
+        left_ours.next(),
+        left_theirs.next(),
+        left_theirs.next(),
+    );
+
+    if let (Some(j), None, Some(i), None) = left {
+        pairs[j] = Some(i);
+    }
+
+    let mut merged = Vec::with_capacity(theirs.len());
+
+    for (entry, pair) in ours.drain(..).zip(pairs) {
+        let pair = pair.and_then(|i| Some((&theirs[i], shown[i].as_ref()?)));
+
+        merged.push(match pair {
+            Some((theirs, shown)) => {
+                let mut kept = theirs.clone();
+                overlay(&mut kept, &entry, shown);
+                kept
+            }
+            None => entry,
+        });
+    }
+
+    for (entry, shown) in theirs.iter().zip(&shown) {
+        if shown.is_none() && !merged.contains(entry) {
+            merged.push(entry.clone());
+        }
+    }
+
+    *ours = merged;
+}
+
+/// [`merge_list`] for a field People holds one entry of.
+///
+/// `theirs` is the entry the vCard shows as `shown`, or hides.
+fn merge_one<T: Clone + Default>(
+    ours: &mut Vec<T>,
+    theirs: Option<&T>,
+    shown: Option<T>,
+    overlay: impl Fn(&mut T, &T, &T),
+) {
+    let Some(theirs) = theirs else {
+        return;
+    };
+
+    match ours.first() {
+        Some(entry) => {
+            let mut kept = theirs.clone();
+            overlay(&mut kept, entry, &shown.unwrap_or_default());
+            *ours = vec![kept];
+        }
+        None if shown.is_none() => ours.push(theirs.clone()),
+        None => {}
+    }
+}
+
+/// A vCard projected onto a People person.
+#[derive(Debug, Clone, Default, Eq, PartialEq)]
+pub struct GpeoplePersonVcard {
+    /// The person the vCard projects onto.
+    pub person: GpeoplePerson,
+    /// Names of the properties too long for the stash, absent from `person`.
+    pub dropped: Vec<String>,
 }
 
 /// A vCard that cannot become a People person.
@@ -1147,7 +1422,7 @@ mod tests {
             NOTE:a note\r\nRELATED;TYPE=spouse;VALUE=text:John Doe\r\n\
             RELATED;TYPE=child;VALUE=text:Jimmy\r\nEND:VCARD\r\n";
 
-        let person = GpeoplePerson::from_vcard(vcard).unwrap();
+        let person = GpeoplePerson::from_vcard(vcard).unwrap().person;
         assert_eq!(person.resource_name, "");
 
         let name = &person.names[0];
@@ -1218,7 +1493,8 @@ mod tests {
 
         let fields = GpeoplePerson::from_vcard(edited)
             .unwrap()
-            .changed_fields(&GpeoplePerson::from_vcard(base).unwrap());
+            .person
+            .changed_fields(&GpeoplePerson::from_vcard(base).unwrap().person);
         assert_eq!(
             fields,
             vec![
@@ -1231,7 +1507,7 @@ mod tests {
     #[test]
     fn changed_fields_of_identical_cards_is_empty() {
         let vcard = full_person().to_vcard();
-        let person = GpeoplePerson::from_vcard(&vcard).unwrap();
+        let person = GpeoplePerson::from_vcard(&vcard).unwrap().person;
         assert!(person.changed_fields(&person.clone()).is_empty());
     }
 
@@ -1239,7 +1515,9 @@ mod tests {
     fn round_trip() {
         let person = full_person();
         assert_eq!(
-            GpeoplePerson::from_vcard(&person.to_vcard()).unwrap(),
+            GpeoplePerson::from_vcard(&person.to_vcard())
+                .unwrap()
+                .person,
             person
         );
     }
@@ -1249,7 +1527,7 @@ mod tests {
         let vcard = "BEGIN:VCARD\r\nVERSION:4.0\r\nFN:X\r\nX-FOO;TYPE=bar:baz\r\n\
             GENDER:F\r\nBDAY:--0412\r\nEND:VCARD\r\n";
 
-        let person = GpeoplePerson::from_vcard(vcard).unwrap();
+        let person = GpeoplePerson::from_vcard(vcard).unwrap().person;
         assert!(person.birthdays.is_empty());
 
         let stash = &person.client_data[0];
@@ -1265,7 +1543,7 @@ mod tests {
         assert!(restored.contains("BDAY:--0412\r\n"));
         assert!(restored.ends_with("END:VCARD\r\n"));
 
-        assert_eq!(GpeoplePerson::from_vcard(&restored).unwrap(), person);
+        assert_eq!(GpeoplePerson::from_vcard(&restored).unwrap().person, person);
     }
 
     #[test]
@@ -1301,7 +1579,7 @@ mod tests {
             "END:VCARD",
             "X-GOOGLE-MEMBERSHIP:contactGroups/myContacts\r\nEND:VCARD",
         );
-        let back = GpeoplePerson::from_vcard(&legacy).unwrap();
+        let back = GpeoplePerson::from_vcard(&legacy).unwrap().person;
         assert!(back.memberships.is_empty());
         assert!(back.external_ids.is_empty());
         assert!(back.client_data.is_empty());
@@ -1314,7 +1592,8 @@ mod tests {
 
         let fields = GpeoplePerson::from_vcard(edited)
             .unwrap()
-            .changed_fields(&GpeoplePerson::from_vcard(base).unwrap());
+            .person
+            .changed_fields(&GpeoplePerson::from_vcard(base).unwrap().person);
         assert_eq!(fields, vec![GpeoplePersonField::ClientData]);
     }
 
@@ -1324,7 +1603,7 @@ mod tests {
         let vcard =
             format!("BEGIN:VCARD\r\nVERSION:4.0\r\nFN:X\r\n{photo}\r\nX-FOO:bar\r\nEND:VCARD\r\n");
 
-        let person = GpeoplePerson::from_vcard(&vcard).unwrap();
+        let person = GpeoplePerson::from_vcard(&vcard).unwrap().person;
         assert_eq!(person.client_data[0].value.as_deref(), Some("X-FOO:bar"));
     }
 
@@ -1333,7 +1612,7 @@ mod tests {
         let vcard = "BEGIN:VCARD\r\nVERSION:4.0\r\nUID:urn:uuid:4fbe8971\r\n\
             FN:Jane Doe\r\nEND:VCARD\r\n";
 
-        let mut person = GpeoplePerson::from_vcard(vcard).unwrap();
+        let mut person = GpeoplePerson::from_vcard(vcard).unwrap().person;
         // NOTE: what People hands back after the create: its own resource
         // name, and the stash it was given.
         person.resource_name = "people/c123".into();
@@ -1378,7 +1657,7 @@ mod tests {
             &long[149..],
         );
 
-        let person = GpeoplePerson::from_vcard(&vcard).unwrap();
+        let person = GpeoplePerson::from_vcard(&vcard).unwrap().person;
         assert_eq!(
             person.client_data[0].value,
             Some(format!("{long}\nX-SHORT:kept"))
@@ -1397,7 +1676,7 @@ mod tests {
             &uid[71..],
         );
 
-        let person = GpeoplePerson::from_vcard(&vcard).unwrap();
+        let person = GpeoplePerson::from_vcard(&vcard).unwrap().person;
         assert_eq!(person.stashed_uid(), Some(uid));
     }
 
@@ -1514,7 +1793,7 @@ mod tests {
                 folded.join(eol),
             );
 
-            let person = GpeoplePerson::from_vcard(&vcard).unwrap();
+            let person = GpeoplePerson::from_vcard(&vcard).unwrap().person;
             assert_eq!(stash_lines(&person), lines, "case {case}: {vcard:?}");
 
             let restored = person.to_vcard();
@@ -1524,7 +1803,7 @@ mod tests {
                 assert!(unfolded.contains(&line), "case {case}: {restored:?}");
             }
 
-            let back = GpeoplePerson::from_vcard(&restored).unwrap();
+            let back = GpeoplePerson::from_vcard(&restored).unwrap().person;
             assert_eq!(back, person, "case {case}: {restored:?}");
 
             // NOTE: the shape stored before the stash held logical lines.
@@ -1541,7 +1820,7 @@ mod tests {
         person.urls[0].value = Some("https://doe.org/\r\nTEL:+339999\nX-INJECTED:1".into());
 
         let vcard = person.to_vcard();
-        let back = GpeoplePerson::from_vcard(&vcard).unwrap();
+        let back = GpeoplePerson::from_vcard(&vcard).unwrap().person;
         assert_eq!(back.phone_numbers, person.phone_numbers);
         assert_eq!(back.client_data, []);
 
@@ -1555,10 +1834,494 @@ mod tests {
         person.im_clients[0].protocol = Some("xmpp\nX-INJECTED:1".into());
 
         let vcard = person.to_vcard();
-        let back = GpeoplePerson::from_vcard(&vcard).unwrap();
+        let back = GpeoplePerson::from_vcard(&vcard).unwrap().person;
         assert_eq!(back.phone_numbers, person.phone_numbers);
         assert_eq!(back.client_data, []);
 
         assert!(vcard.contains("IMPP:xmpp%0AX-INJECTED:1:jane%0D%0ATEL:+339999\r\n"));
+    }
+
+    #[test]
+    fn a_nameless_person_stashes_no_empty_fn() {
+        let person = GpeoplePerson::default();
+
+        let once = GpeoplePerson::from_vcard(&person.to_vcard())
+            .unwrap()
+            .person;
+        assert_eq!(once.client_data, []);
+
+        let stored = stashed("FN:\nFN:\nX-FOO:bar".into());
+        let vcard = stored.to_vcard();
+        assert_eq!(vcard.matches("FN:").count(), 1, "{vcard}");
+        assert!(vcard.contains("X-FOO:bar\r\n"));
+    }
+
+    /// A person as People holds it, with what a vCard cannot show.
+    fn server_person() -> GpeoplePerson {
+        use crate::v1::rest::people::{GpeopleFieldMetadata, GpeopleNicknameType};
+
+        let primary = Some(GpeopleFieldMetadata {
+            primary: Some(true),
+            ..Default::default()
+        });
+
+        GpeoplePerson {
+            resource_name: "people/c1".into(),
+            names: vec![GpeopleName {
+                metadata: primary.clone(),
+                display_name: Some("Jane Doe".into()),
+                unstructured_name: Some("Jane Doe".into()),
+                family_name: Some("Doe".into()),
+                given_name: Some("Jane".into()),
+                phonetic_given_name: Some("Djayn".into()),
+                ..Default::default()
+            }],
+            nicknames: vec![GpeopleNickname {
+                value: Some("Janie".into()),
+                nickname_type: Some(GpeopleNicknameType::ShortName),
+                ..Default::default()
+            }],
+            email_addresses: vec![
+                GpeopleEmailAddress {
+                    metadata: primary.clone(),
+                    value: Some("jane@doe.org".into()),
+                    email_type: Some("home".into()),
+                    formatted_type: Some("Home".into()),
+                    ..Default::default()
+                },
+                GpeopleEmailAddress {
+                    value: Some("jane@school.edu".into()),
+                    email_type: Some("School".into()),
+                    display_name: Some("Jane at school".into()),
+                    ..Default::default()
+                },
+            ],
+            im_clients: vec![GpeopleImClient {
+                username: Some("jane".into()),
+                protocol: Some("xmpp".into()),
+                im_type: Some("work".into()),
+                ..Default::default()
+            }],
+            phone_numbers: vec![
+                GpeoplePhoneNumber {
+                    value: Some("+331111".into()),
+                    canonical_form: Some("+331111".into()),
+                    phone_type: Some("mobile".into()),
+                    ..Default::default()
+                },
+                GpeoplePhoneNumber {
+                    value: Some("+332222".into()),
+                    phone_type: Some("workFax".into()),
+                    ..Default::default()
+                },
+            ],
+            addresses: vec![GpeopleAddress {
+                street_address: Some("12 Main St".into()),
+                city: Some("Paris".into()),
+                country_code: Some("FR".into()),
+                address_type: Some("other".into()),
+                ..Default::default()
+            }],
+            organizations: vec![
+                GpeopleOrganization {
+                    name: Some("ACME".into()),
+                    title: Some("Boss".into()),
+                    job_description: Some("Runs it".into()),
+                    start_date: Some(GpeopleDate {
+                        year: Some(2020),
+                        month: Some(1),
+                        day: Some(1),
+                    }),
+                    ..Default::default()
+                },
+                GpeopleOrganization {
+                    name: Some("Old Corp".into()),
+                    title: Some("Intern".into()),
+                    ..Default::default()
+                },
+            ],
+            occupations: vec![
+                GpeopleOccupation {
+                    value: Some("Engineer".into()),
+                    ..Default::default()
+                },
+                GpeopleOccupation {
+                    value: Some("Pilot".into()),
+                    ..Default::default()
+                },
+            ],
+            urls: vec![GpeopleUrl {
+                value: Some("https://doe.org".into()),
+                url_type: Some("blog".into()),
+                ..Default::default()
+            }],
+            birthdays: vec![GpeopleBirthday {
+                date: Some(GpeopleDate {
+                    year: Some(1983),
+                    month: Some(4),
+                    day: Some(1),
+                }),
+                text: Some("April fools".into()),
+                ..Default::default()
+            }],
+            biographies: vec![GpeopleBiography {
+                metadata: primary,
+                value: Some("a note".into()),
+                content_type: Some(GpeopleContentType::TextPlain),
+            }],
+            relations: vec![
+                GpeopleRelation {
+                    person: Some("John Doe".into()),
+                    relation_type: Some("spouse".into()),
+                    formatted_type: Some("Spouse".into()),
+                    ..Default::default()
+                },
+                GpeopleRelation {
+                    person: Some("Ann".into()),
+                    relation_type: Some("mother".into()),
+                    ..Default::default()
+                },
+                GpeopleRelation {
+                    person: Some("Bob".into()),
+                    relation_type: Some("assistant".into()),
+                    ..Default::default()
+                },
+            ],
+            client_data: vec![
+                GpeopleClientData {
+                    key: Some("other.app".into()),
+                    value: Some("kept".into()),
+                    ..Default::default()
+                },
+                GpeopleClientData {
+                    key: Some(GPEOPLE_PERSON_STASH_KEY.into()),
+                    value: Some("UID:urn:uuid:4fbe8971\nX-FOO:bar".into()),
+                    ..Default::default()
+                },
+            ],
+            ..Default::default()
+        }
+    }
+
+    /// The update sent for `current` once `from` became `to` in its vCard.
+    fn update(
+        current: &GpeoplePerson,
+        from: &str,
+        to: &str,
+    ) -> (GpeoplePerson, Vec<GpeoplePersonField>) {
+        let vcard = current.to_vcard();
+        assert!(vcard.contains(from), "{vcard}");
+
+        let edited = vcard.replace(from, to);
+        let mut person = GpeoplePerson::from_vcard(&edited).unwrap().person;
+        let base = GpeoplePerson::from_vcard(&vcard).unwrap().person;
+        let fields = person.changed_fields(&base);
+        person.merge_unprojected(current, &fields);
+
+        (person, fields)
+    }
+
+    #[test]
+    fn an_update_keeps_the_entries_the_vcard_cannot_show() {
+        let current = server_person();
+
+        let (person, fields) = update(&current, ":John Doe\r\n", ":Johnny Doe\r\n");
+        assert_eq!(fields, [GpeoplePersonField::Relations]);
+        assert_eq!(
+            person.relations,
+            [
+                GpeopleRelation {
+                    person: Some("Johnny Doe".into()),
+                    ..current.relations[0].clone()
+                },
+                current.relations[1].clone(),
+                current.relations[2].clone(),
+            ]
+        );
+
+        let (person, fields) = update(&current, "ROLE:Engineer\r\n", "ROLE:Writer\r\n");
+        assert_eq!(fields, [GpeoplePersonField::Occupations]);
+        assert_eq!(person.occupations[0].value.as_deref(), Some("Writer"));
+        assert_eq!(person.occupations[1..], current.occupations[1..]);
+    }
+
+    #[test]
+    fn an_update_keeps_the_sub_fields_the_vcard_cannot_show() {
+        let current = server_person();
+
+        let (person, fields) = update(&current, "TITLE:Boss\r\n", "TITLE:Chief\r\n");
+        assert_eq!(fields, [GpeoplePersonField::Organizations]);
+        assert_eq!(
+            person.organizations,
+            [
+                GpeopleOrganization {
+                    title: Some("Chief".into()),
+                    ..current.organizations[0].clone()
+                },
+                current.organizations[1].clone(),
+            ]
+        );
+
+        let (person, fields) = update(&current, "FN:Jane Doe\r\n", "FN:Janet Doe\r\n");
+        assert_eq!(fields, [GpeoplePersonField::Names]);
+        assert_eq!(
+            person.names,
+            [GpeopleName {
+                unstructured_name: Some("Janet Doe".into()),
+                ..current.names[0].clone()
+            }]
+        );
+
+        let (person, fields) = update(&current, "BDAY:1983-04-01", "BDAY:1984-04-01");
+        assert_eq!(fields, [GpeoplePersonField::Birthdays]);
+        assert_eq!(person.birthdays[0].text, current.birthdays[0].text);
+        assert_eq!(person.birthdays[0].date.as_ref().unwrap().year, Some(1984));
+    }
+
+    #[test]
+    fn an_update_keeps_a_type_the_vcard_cannot_show() {
+        let current = server_person();
+
+        let (person, fields) = update(&current, "END:VCARD", "EMAIL:new@doe.org\r\nEND:VCARD");
+        assert_eq!(fields, [GpeoplePersonField::EmailAddresses]);
+        assert_eq!(person.email_addresses[..2], current.email_addresses[..]);
+        assert_eq!(
+            person.email_addresses[2],
+            GpeopleEmailAddress {
+                value: Some("new@doe.org".into()),
+                ..Default::default()
+            }
+        );
+
+        let (person, fields) = update(&current, ":+331111\r\n", ":+339999\r\n");
+        assert_eq!(fields, [GpeoplePersonField::PhoneNumbers]);
+        assert_eq!(
+            person.phone_numbers,
+            [
+                GpeoplePhoneNumber {
+                    value: Some("+339999".into()),
+                    ..current.phone_numbers[0].clone()
+                },
+                current.phone_numbers[1].clone(),
+            ]
+        );
+    }
+
+    #[test]
+    fn an_update_takes_the_type_the_vcard_changed() {
+        let current = server_person();
+
+        let (person, _) = update(&current, "EMAIL;TYPE=home:", "EMAIL;TYPE=work:");
+        assert_eq!(
+            person.email_addresses[0].email_type.as_deref(),
+            Some("work")
+        );
+        assert_eq!(person.email_addresses[1], current.email_addresses[1]);
+
+        let (person, _) = update(&current, "EMAIL:jane@school", "EMAIL;TYPE=home:jane@school");
+        assert_eq!(
+            person.email_addresses,
+            [
+                current.email_addresses[0].clone(),
+                GpeopleEmailAddress {
+                    email_type: Some("home".into()),
+                    ..current.email_addresses[1].clone()
+                },
+            ]
+        );
+
+        let (person, _) = update(&current, "TEL;TYPE=cell:", "TEL:");
+        assert_eq!(person.phone_numbers[0].phone_type, None);
+        assert_eq!(person.phone_numbers[1], current.phone_numbers[1]);
+    }
+
+    #[test]
+    fn an_update_removes_what_the_vcard_removed() {
+        let current = server_person();
+
+        let (person, fields) = update(&current, "EMAIL:jane@school.edu\r\n", "");
+        assert_eq!(fields, [GpeoplePersonField::EmailAddresses]);
+        assert_eq!(person.email_addresses, current.email_addresses[..1]);
+
+        let spouse = "RELATED;TYPE=spouse;VALUE=text:John Doe\r\n";
+        let (person, fields) = update(&current, spouse, "");
+        assert_eq!(fields, [GpeoplePersonField::Relations]);
+        assert_eq!(person.relations, current.relations[1..]);
+
+        let (person, fields) = update(&current, "BDAY:1983-04-01\r\n", "");
+        assert_eq!(fields, [GpeoplePersonField::Birthdays]);
+        assert_eq!(person.birthdays, []);
+    }
+
+    #[test]
+    fn the_one_entry_edited_keeps_its_sub_fields() {
+        let current = server_person();
+
+        let (person, fields) = update(&current, "URL:https://doe.org", "URL:https://doe.example");
+        assert_eq!(fields, [GpeoplePersonField::Urls]);
+        assert_eq!(
+            person.urls,
+            [GpeopleUrl {
+                value: Some("https://doe.example".into()),
+                ..current.urls[0].clone()
+            }]
+        );
+
+        let (person, fields) = update(&current, "12 Main St", "13 Main St");
+        assert_eq!(fields, [GpeoplePersonField::Addresses]);
+        assert_eq!(
+            person.addresses,
+            [GpeopleAddress {
+                street_address: Some("13 Main St".into()),
+                ..current.addresses[0].clone()
+            }]
+        );
+
+        let (person, fields) = update(&current, "IMPP:xmpp:jane", "IMPP:sip:jane");
+        assert_eq!(fields, [GpeoplePersonField::ImClients]);
+        assert_eq!(
+            person.im_clients,
+            [GpeopleImClient {
+                protocol: Some("sip".into()),
+                ..current.im_clients[0].clone()
+            }]
+        );
+    }
+
+    #[test]
+    fn two_entries_edited_at_once_are_new_entries() {
+        let mut current = server_person();
+        current.urls.push(GpeopleUrl {
+            value: Some("https://jane.example".into()),
+            url_type: Some("profile".into()),
+            ..Default::default()
+        });
+
+        let (person, _) = update(&current, "URL:https://", "URL:http://");
+        let values: Vec<_> = person.urls.iter().map(|url| url.value.as_deref()).collect();
+        assert_eq!(
+            values,
+            [Some("http://doe.org"), Some("http://jane.example")]
+        );
+        assert_eq!(person.urls[0].url_type, None);
+        assert_eq!(person.urls[1].url_type, None);
+    }
+
+    #[test]
+    fn an_update_keeps_the_client_data_of_others() {
+        let current = server_person();
+
+        let (person, fields) = update(&current, "X-FOO:bar", "X-FOO:baz");
+        assert_eq!(fields, [GpeoplePersonField::ClientData]);
+        assert_eq!(
+            person.client_data,
+            [
+                GpeopleClientData {
+                    key: Some(GPEOPLE_PERSON_STASH_KEY.into()),
+                    value: Some("UID:urn:uuid:4fbe8971\nX-FOO:baz".into()),
+                    ..Default::default()
+                },
+                current.client_data[0].clone(),
+            ]
+        );
+    }
+
+    /// Every field the projection manages, the widest update mask.
+    const MANAGED: &[GpeoplePersonField] = &[
+        GpeoplePersonField::Addresses,
+        GpeoplePersonField::Biographies,
+        GpeoplePersonField::Birthdays,
+        GpeoplePersonField::ClientData,
+        GpeoplePersonField::EmailAddresses,
+        GpeoplePersonField::ImClients,
+        GpeoplePersonField::Names,
+        GpeoplePersonField::Nicknames,
+        GpeoplePersonField::Occupations,
+        GpeoplePersonField::Organizations,
+        GpeoplePersonField::PhoneNumbers,
+        GpeoplePersonField::Relations,
+        GpeoplePersonField::Urls,
+    ];
+
+    #[test]
+    fn an_unedited_vcard_erases_nothing_under_the_widest_mask() {
+        let mut current = server_person();
+        current.birthdays[0].date.as_mut().unwrap().year = None;
+        current.biographies.insert(
+            0,
+            GpeopleBiography {
+                value: Some("<b>a profile</b>".into()),
+                content_type: Some(GpeopleContentType::TextHtml),
+                ..Default::default()
+            },
+        );
+        current.relations.rotate_left(1);
+
+        let mut person = GpeoplePerson::from_vcard(&current.to_vcard())
+            .unwrap()
+            .person;
+        assert_eq!(person.changed_fields(&person.clone()), []);
+        person.merge_unprojected(&current, MANAGED);
+
+        macro_rules! assert_kept {
+            ($($list:ident),+) => {$(
+                assert_eq!(person.$list.len(), current.$list.len(), stringify!($list));
+                for entry in &current.$list {
+                    assert!(person.$list.contains(entry), "{entry:?}");
+                }
+            )+};
+        }
+
+        assert_kept!(
+            addresses,
+            birthdays,
+            client_data,
+            email_addresses,
+            im_clients,
+            names,
+            nicknames,
+            occupations,
+            organizations,
+            phone_numbers,
+            relations,
+            urls
+        );
+
+        // NOTE: an update cannot touch the HTML one, which a profile owns.
+        assert_eq!(person.biographies, current.biographies[1..]);
+
+        let once = person.clone();
+        person.merge_unprojected(&current, MANAGED);
+        assert_eq!(person, once);
+    }
+
+    #[test]
+    fn a_field_outside_the_mask_is_left_alone() {
+        let current = server_person();
+        let vcard = current.to_vcard();
+
+        let mut person = GpeoplePerson::from_vcard(&vcard).unwrap().person;
+        let projected = person.clone();
+        person.merge_unprojected(&current, &[GpeoplePersonField::Urls]);
+
+        assert_eq!(person.urls, current.urls);
+        assert_eq!(person.relations, projected.relations);
+        assert_eq!(person.email_addresses, projected.email_addresses);
+    }
+
+    #[test]
+    fn from_vcard_names_the_properties_it_drops() {
+        let blob = "A".repeat(10_000);
+        let vcard = format!(
+            "BEGIN:VCARD\r\nVERSION:4.0\r\nFN:X\r\nPHOTO;MEDIATYPE=image/jpeg:data:{blob}\r\n\
+             item1.key:data:{blob}\r\nX-FOO:bar\r\nEND:VCARD\r\n"
+        );
+
+        let projected = GpeoplePerson::from_vcard(&vcard).unwrap();
+        assert_eq!(projected.dropped, ["PHOTO", "ITEM1.KEY"]);
+        assert_eq!(stash_lines(&projected.person), ["X-FOO:bar"]);
+
+        let small = "BEGIN:VCARD\r\nVERSION:4.0\r\nFN:X\r\nX-FOO:bar\r\nEND:VCARD\r\n";
+        assert_eq!(GpeoplePerson::from_vcard(small).unwrap().dropped, [""; 0]);
     }
 }

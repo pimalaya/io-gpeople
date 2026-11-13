@@ -176,7 +176,9 @@ fn vcard() {
         &mut leftovers,
         |client, leftovers| {
             let card = vcard_document(&tag, &uid, "+33 6 12 34 56 78", true);
-            let written = GpeoplePerson::from_vcard(&card).expect("the card projects");
+            let written = GpeoplePerson::from_vcard(&card)
+                .expect("the card projects")
+                .person;
             let created = client
                 .contact_create(&written, GPEOPLE_PERSON_VCARD_FIELDS, &[])
                 .expect("contact create")
@@ -199,7 +201,9 @@ fn vcard() {
                 "the stash restores the unmanaged lines:\n{read}"
             );
 
-            let back = GpeoplePerson::from_vcard(&read).expect("the read card projects");
+            let back = GpeoplePerson::from_vcard(&read)
+                .expect("the read card projects")
+                .person;
             let changed = back.changed_fields(&written);
             assert!(
                 changed.is_empty(),
@@ -207,7 +211,9 @@ fn vcard() {
             );
 
             let edited_card = vcard_document(&tag, &uid, "+33 6 98 76 54 32", false);
-            let edited = GpeoplePerson::from_vcard(&edited_card).expect("the edited card projects");
+            let edited = GpeoplePerson::from_vcard(&edited_card)
+                .expect("the edited card projects")
+                .person;
             let mask = edited.changed_fields(&back);
             assert!(
                 mask.len() == 2
@@ -216,22 +222,22 @@ fn vcard() {
                 "the mask holds the phone and the note alone, got {mask:?}"
             );
 
+            let mut update = GpeoplePerson {
+                resource_name: fetched.resource_name.clone(),
+                etag: fetched.etag.clone(),
+                ..edited.clone()
+            };
+            update.merge_unprojected(&fetched, &mask);
+
             let updated = client
-                .contact_update(
-                    &GpeoplePerson {
-                        resource_name: fetched.resource_name.clone(),
-                        etag: fetched.etag.clone(),
-                        ..edited.clone()
-                    },
-                    &mask,
-                    GPEOPLE_PERSON_VCARD_FIELDS,
-                    &[],
-                )
+                .contact_update(&update, &mask, GPEOPLE_PERSON_VCARD_FIELDS, &[])
                 .expect("contact update")
                 .response;
 
             let reread = updated.to_vcard();
-            let back = GpeoplePerson::from_vcard(&reread).expect("the updated card projects");
+            let back = GpeoplePerson::from_vcard(&reread)
+                .expect("the updated card projects")
+                .person;
             let changed = back.changed_fields(&edited);
             assert!(
                 changed.is_empty(),
