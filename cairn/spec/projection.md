@@ -97,7 +97,7 @@ A vCard entry SHALL be paired with a server entry not yet paired, trying in this
 
 ### Requirement: A field of one entry stays of one entry
 
-For names, birthdays and biographies, of which a contact holds one, the merged field SHALL hold at most one entry: the vCard's entry laid over the server's (the first name, the first birthday, the first biography that is not HTML), or the server's entry alone when the vCard hides it (a birthday without a year) and gives none. Further server entries, which another source owns and an update does not modify, are not sent.
+For names, birthdays and biographies, of which a contact holds one, the merged field SHALL hold at most one entry: the vCard's entry laid over the server's (the first name, the first birthday, the first biography that is not HTML), or the server's entry alone when the vCard hides it (a birthday without a day) and gives none. Further server entries, which another source owns and an update does not modify, are not sent.
 
 #### Scenario: Phonetic names
 
@@ -125,6 +125,20 @@ A logical line longer than 8 KiB is not stashed. `GpeoplePerson::from_vcard` SHA
 
 - **WHEN** a vCard holds a PHOTO line of 10,000 octets and `X-FOO:bar`
 - **THEN** `dropped` is `PHOTO` and the stash holds `X-FOO:bar` alone
+
+### Requirement: A year-less birthday is a People birthday
+
+`GpeoplePerson::from_vcard` SHALL read the first `BDAY` holding a full date (`YYYY-MM-DD` or `YYYYMMDD`) or a year-less one (`--MMDD`, RFC 6350 §4.3.1) into a People birthday, the year-less one with no year. `GpeoplePerson::to_vcard` SHALL write a People birthday whose year is absent or 0 as `--MMDD`. Any other `BDAY` (a reduced precision such as `1985-04`, a value carrying a time, a month or a day out of range) SHALL ride the stash.
+
+#### Scenario: A year-less birthday
+
+- **WHEN** a vCard holding `BDAY:--0412` goes through `from_vcard`, then `to_vcard`
+- **THEN** the person's birthday is April 12 with no year, nothing is stashed, and the output holds `BDAY:--0412`
+
+#### Scenario: A reduced-precision birthday
+
+- **WHEN** a vCard holding `BDAY:1985-04` goes through `from_vcard`
+- **THEN** the person holds no birthday and the stash holds `BDAY:1985-04`
 
 ### Requirement: An unknown enum value stays on its entry
 

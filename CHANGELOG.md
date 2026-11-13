@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed `GpeoplePerson::from_vcard` stashing a year-less `BDAY` instead of reading it into a birthday.
+
+- Fixed `GpeoplePerson::to_vcard` dropping a birthday without a year instead of writing it as `--MMDD`.
+
 ## [0.7.0] - 2026-11-13
 
 ### Added

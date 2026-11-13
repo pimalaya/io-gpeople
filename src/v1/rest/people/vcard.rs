@@ -254,15 +254,11 @@ impl GpeoplePerson {
             }
         }
 
-        // NOTE: People dates can be partial (year-less birthdays); only a
-        // full date is projected, see VcardDateAndOrTime::full_date.
-        if let Some(date) = person.birthdays.first().and_then(|birthday| {
-            let date = birthday.date.as_ref()?;
-            Some(format!(
-                "{:04}-{:02}-{:02}",
-                date.year?, date.month?, date.day?
-            ))
-        }) {
+        if let Some(date) = person
+            .birthdays
+            .first()
+            .and_then(|birthday| bday_value(birthday.date.as_ref()?))
+        {
             card.push(VcardProp {
                 group: None,
                 name: VcardPropName::Kind(VcardPropKind::Bday),
@@ -507,19 +503,11 @@ impl GpeoplePerson {
                     }
                 }
                 Ok(VcardPropKind::Bday) => {
-                    // NOTE: a partial (year-less) birthday has no People
-                    // date it round-trips through; it lands in the stash.
                     if person.birthdays.is_empty()
-                        && let Some(date) =
-                            VcardDateAndOrTime::from(line.raw_value_str()).full_date()
+                        && let Some(date) = bday_date(&line.raw_value_str())
                     {
-                        let mut parts = date.split('-').map(|part| part.parse().ok());
                         person.birthdays.push(GpeopleBirthday {
-                            date: Some(GpeopleDate {
-                                year: parts.next().flatten(),
-                                month: parts.next().flatten(),
-                                day: parts.next().flatten(),
-                            }),
+                            date: Some(date),
                             ..Default::default()
                         });
                         true
@@ -1115,6 +1103,48 @@ fn tel_type_of(types: &[String]) -> Option<String> {
     }
 }
 
+/// The `BDAY` of a full or a year-less (year absent or 0) People date.
+fn bday_value(date: &GpeopleDate) -> Option<String> {
+    let (month, day) = (date.month?, date.day?);
+    if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+        return None;
+    }
+
+    match date.year {
+        Some(year) if year != 0 => Some(format!("{year:04}-{month:02}-{day:02}")),
+        _ => Some(format!("--{month:02}{day:02}")),
+    }
+}
+
+/// The People date of a full or a year-less (`--MMDD`) `BDAY`.
+fn bday_date(raw: &str) -> Option<GpeopleDate> {
+    if let Some(date) = VcardDateAndOrTime::from(raw).full_date() {
+        let mut parts = date.split('-').map(|part| part.parse().ok());
+        return Some(GpeopleDate {
+            year: parts.next().flatten(),
+            month: parts.next().flatten(),
+            day: parts.next().flatten(),
+        });
+    }
+
+    let digits = raw.trim().strip_prefix("--")?;
+    if digits.len() != 4 || !digits.bytes().all(|b| b.is_ascii_digit()) {
+        return None;
+    }
+
+    let month = digits[..2].parse().ok()?;
+    let day = digits[2..].parse().ok()?;
+    if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
+        return None;
+    }
+
+    Some(GpeopleDate {
+        year: None,
+        month: Some(month),
+        day: Some(day),
+    })
+}
+
 /// The trimmed field, None when unset or blank.
 fn opt(field: &Option<String>) -> Option<&str> {
     let value = field.as_deref()?.trim();
@@ -1526,7 +1556,7 @@ mod tests {
     #[test]
     fn stash_preserves_unprojected_props() {
         let vcard = "BEGIN:VCARD\r\nVERSION:4.0\r\nFN:X\r\nX-FOO;TYPE=bar:baz\r\n\
-            GENDER:F\r\nBDAY:--0412\r\nEND:VCARD\r\n";
+            GENDER:F\r\nBDAY:1985-04\r\nEND:VCARD\r\n";
 
         let person = GpeoplePerson::from_vcard(vcard).unwrap().person;
         assert!(person.birthdays.is_empty());
@@ -1535,16 +1565,62 @@ mod tests {
         assert_eq!(stash.key.as_deref(), Some(GPEOPLE_PERSON_STASH_KEY));
         assert_eq!(
             stash.value.as_deref(),
-            Some("X-FOO;TYPE=bar:baz\nGENDER:F\nBDAY:--0412")
+            Some("X-FOO;TYPE=bar:baz\nGENDER:F\nBDAY:1985-04")
         );
 
         let restored = person.to_vcard();
         assert!(restored.contains("X-FOO;TYPE=bar:baz\r\n"));
         assert!(restored.contains("GENDER:F\r\n"));
-        assert!(restored.contains("BDAY:--0412\r\n"));
+        assert!(restored.contains("BDAY:1985-04\r\n"));
         assert!(restored.ends_with("END:VCARD\r\n"));
 
         assert_eq!(GpeoplePerson::from_vcard(&restored).unwrap().person, person);
+    }
+
+    #[test]
+    fn a_year_less_birthday_round_trips_through_a_people_date() {
+        let vcard = "BEGIN:VCARD\r\nVERSION:4.0\r\nFN:X\r\nBDAY:--0412\r\nEND:VCARD\r\n";
+
+        let person = GpeoplePerson::from_vcard(vcard).unwrap().person;
+        assert!(person.client_data.is_empty());
+        assert_eq!(
+            person.birthdays[0].date,
+            Some(GpeopleDate {
+                year: None,
+                month: Some(4),
+                day: Some(12),
+            })
+        );
+
+        let restored = person.to_vcard();
+        assert!(restored.contains("BDAY:--0412\r\n"));
+        assert_eq!(GpeoplePerson::from_vcard(&restored).unwrap().person, person);
+    }
+
+    #[test]
+    fn a_people_birthday_with_year_zero_projects_year_less() {
+        let person = GpeoplePerson {
+            birthdays: vec![GpeopleBirthday {
+                date: Some(GpeopleDate {
+                    year: Some(0),
+                    month: Some(1),
+                    day: Some(2),
+                }),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+
+        assert!(person.to_vcard().contains("BDAY:--0102\r\n"));
+    }
+
+    #[test]
+    fn an_invalid_year_less_birthday_is_stashed() {
+        let vcard = "BEGIN:VCARD\r\nVERSION:4.0\r\nFN:X\r\nBDAY:--1340\r\nEND:VCARD\r\n";
+
+        let person = GpeoplePerson::from_vcard(vcard).unwrap().person;
+        assert!(person.birthdays.is_empty());
+        assert_eq!(person.client_data[0].value.as_deref(), Some("BDAY:--1340"));
     }
 
     #[test]
