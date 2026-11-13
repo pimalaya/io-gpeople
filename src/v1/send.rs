@@ -14,6 +14,7 @@ use alloc::{
 
 use io_http::{
     coroutine::{HttpCoroutine, HttpCoroutineState},
+    rfc3986::path::{HttpUrlBuildError, http_url_build},
     rfc6750::bearer::HttpAuthBearer,
     rfc9110::{
         request::HttpRequest,
@@ -38,29 +39,25 @@ pub(crate) fn resource_url(
     resource_name: &str,
     tail: &str,
 ) -> Result<Url, GpeopleSendError> {
+    let invalid = || {
+        let err = format!("Resource name {resource_name:?} is not {collection}/<id>");
+        GpeopleSendError::InvalidRequest(err)
+    };
+
     let id = resource_name
         .strip_prefix(collection)
         .and_then(|name| name.strip_prefix('/'))
-        .filter(|id| !matches!(*id, "" | "." | ".."));
-
-    let Some(id) = id else {
-        let err = format!("Resource name {resource_name:?} is not {collection}/<id>");
-        return Err(GpeopleSendError::InvalidRequest(err));
-    };
+        .filter(|id| !matches!(*id, "" | "." | ".."))
+        .ok_or_else(invalid)?;
 
     let mut tail = tail.split('/');
     let last = format!("{id}{}", tail.next().unwrap_or_default());
+    let segments = [collection, last.as_str()].into_iter().chain(tail);
 
-    let mut url = Url::parse(GPEOPLE_API_BASE)?;
-
-    url.path_segments_mut()
-        .map_err(|()| GpeopleSendError::InvalidRequest(GPEOPLE_API_BASE.to_string()))?
-        .pop_if_empty()
-        .push(collection)
-        .push(&last)
-        .extend(tail);
-
-    Ok(url)
+    http_url_build(GPEOPLE_API_BASE, segments).map_err(|err| match err {
+        HttpUrlBuildError::InvalidBaseUrl(err, _) => GpeopleSendError::ParseUrl(err),
+        HttpUrlBuildError::InvalidSegment(_) => invalid(),
+    })
 }
 
 /// Placeholder response type for People API operations that return no body
@@ -322,6 +319,9 @@ impl<T: DeserializeOwned> GpeopleSend<T> {
 
     /// Build a request coroutine for an arbitrary HTTP method, optional
     /// content type, and raw body bytes.
+    ///
+    /// A method, content type or token that would split the request fails
+    /// the first resume with [`Http11SendError::InvalidRequest`].
     pub fn with_method(
         auth: &HttpAuthBearer,
         method: &str,

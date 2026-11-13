@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   A value the crate does not know reads as `Unknown` instead of failing the whole response, and is left out of written bodies.
 
+- **BREAKING**: Changed the io-http dependency to 0.7.
+
+  `GpeopleSendError::Send` carries io-http 0.7's `Http11SendError`, which fails with `InvalidRequest`, `UnsupportedTransferCoding` and `TooManyInterimResponses`. The `HttpAuthBearer` the coroutines take has no `Display`.
+
 ### Fixed
 
 - Fixed an empty 2xx body failing every struct response.
@@ -47,7 +51,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fixed the coroutines taking a resource name joining it as a relative URL reference.
 
-  The id is one percent-encoded path segment, and a name outside the coroutine's collection (`people`, `contactGroups` or `otherContacts`) fails with `GpeopleSendError::InvalidRequest`.
+  The id is one percent-encoded path segment, and a name outside the coroutine's collection (`people`, `contactGroups` or `otherContacts`), or whose id holds a tab or a line break, fails with `GpeopleSendError::InvalidRequest`.
+
+- Fixed a bearer token, a method or a content type holding a line break adding lines to the request.
+
+  The first resume fails with `GpeopleSendError::Send` carrying `Http11SendError::InvalidRequest`, before any write.
 
 ## [0.6.0] - 2026-11-04
 

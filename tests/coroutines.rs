@@ -35,7 +35,10 @@ use io_gpeople::{
         send::{GpeopleApiError, GpeopleSendError, parse_api_error},
     },
 };
-use io_http::rfc6750::bearer::HttpAuthBearer;
+use io_http::{
+    rfc6750::bearer::HttpAuthBearer, rfc9110::request::HttpRequestError,
+    rfc9112::send::Http11SendError,
+};
 
 use common::{empty_response, json_response, run};
 
@@ -517,6 +520,38 @@ fn rejects_a_resource_name_outside_its_collection() {
     let fields = [GpeoplePersonField::Names];
     let result = GpeopleOtherContactCopy::new(&auth(), "people/c1", &fields, &[], &[]);
     assert!(matches!(result, Err(GpeopleSendError::InvalidRequest(_))));
+}
+
+#[test]
+fn rejects_a_resource_id_holding_a_tab_or_a_line_break() {
+    let fields = [GpeoplePersonField::Names];
+
+    for name in ["people/.\t.", "people/\n..", "people/c\r1", "people/c1\n"] {
+        let result = GpeoplePersonGet::new(&auth(), name, &fields, &[]);
+        assert!(
+            matches!(result, Err(GpeopleSendError::InvalidRequest(_))),
+            "accepted {name:?}"
+        );
+    }
+
+    let result = GpeopleContactGroupDelete::new(&auth(), "contactGroups/.\t.", true);
+    assert!(matches!(result, Err(GpeopleSendError::InvalidRequest(_))));
+}
+
+#[test]
+fn a_token_holding_a_line_break_never_reaches_the_wire() {
+    let auth = HttpAuthBearer::new("fake-token\r\nX-Injected: 1");
+    let mut coroutine = GpeopleContactDelete::new(&auth, "people/c1").unwrap();
+    let (ret, written) = run(&mut coroutine, &empty_response("HTTP/1.1 200 OK"));
+
+    assert!(written.is_empty(), "wrote {} bytes", written.len());
+
+    let Err(GpeopleSendError::Send(Http11SendError::InvalidRequest(err))) = ret else {
+        panic!("expected an invalid request, got {ret:?}");
+    };
+
+    let name = "Authorization".into();
+    assert_eq!(err, HttpRequestError::InvalidHeaderValue(name));
 }
 
 /// A person holding, in every enum a response fills, a value to come.

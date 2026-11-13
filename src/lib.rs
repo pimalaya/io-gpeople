@@ -41,7 +41,9 @@
 //! `status` and `details[].reason`), so callers match rate limits and
 //! an expired sync token on Google's codes rather than on the message
 //! text. A 3xx surfaces as an unexpected-redirect error; redirects are
-//! never followed. An empty 2xx body reads as `{}`: the
+//! never followed. A method or a header that would split the request
+//! (a token holding a line break) fails the first resume, before any
+//! write. An empty 2xx body reads as `{}`: the
 //! `GpeopleNoResponse` unit marker ignores it (delete), and a struct
 //! response takes its defaults.
 //!
