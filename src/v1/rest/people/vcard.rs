@@ -254,9 +254,6 @@ impl GpeoplePerson {
             }
         }
 
-        // NOTE: People dates can be partial; a full date and a year-less
-        // one (`--MMDD`, RFC 6350 4.3.1) have a vCard slot, any other
-        // partial date does not project.
         if let Some(date) = person
             .birthdays
             .first()
@@ -506,9 +503,6 @@ impl GpeoplePerson {
                     }
                 }
                 Ok(VcardPropKind::Bday) => {
-                    // NOTE: a full date and a year-less one (`--MMDD`)
-                    // round-trip through a People date; any other partial
-                    // birthday has none and lands in the stash.
                     if person.birthdays.is_empty()
                         && let Some(date) = bday_date(&line.raw_value_str())
                     {
@@ -1109,10 +1103,7 @@ fn tel_type_of(types: &[String]) -> Option<String> {
     }
 }
 
-/// The trimmed field, None when unset or blank.
-/// The vCard `BDAY` value of a People date: `YYYY-MM-DD` for a full
-/// date, `--MMDD` for a year-less one (year absent or 0), `None` for any
-/// other partial date.
+/// The `BDAY` of a full or a year-less (year absent or 0) People date.
 fn bday_value(date: &GpeopleDate) -> Option<String> {
     let (month, day) = (date.month?, date.day?);
     if !(1..=12).contains(&month) || !(1..=31).contains(&day) {
@@ -1125,8 +1116,7 @@ fn bday_value(date: &GpeopleDate) -> Option<String> {
     }
 }
 
-/// The People date of a vCard `BDAY` value: a full date, or a year-less
-/// `--MMDD` one, `None` for anything else.
+/// The People date of a full or a year-less (`--MMDD`) `BDAY`.
 fn bday_date(raw: &str) -> Option<GpeopleDate> {
     if let Some(date) = VcardDateAndOrTime::from(raw).full_date() {
         let mut parts = date.split('-').map(|part| part.parse().ok());
@@ -1155,6 +1145,7 @@ fn bday_date(raw: &str) -> Option<GpeopleDate> {
     })
 }
 
+/// The trimmed field, None when unset or blank.
 fn opt(field: &Option<String>) -> Option<&str> {
     let value = field.as_deref()?.trim();
     if value.is_empty() { None } else { Some(value) }
