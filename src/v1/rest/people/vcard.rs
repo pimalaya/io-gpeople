@@ -616,19 +616,18 @@ impl GpeoplePerson {
     /// The stashed properties `base` carries and this person cannot remove.
     ///
     /// The stash is a `clientData` entry People refuses to empty: an update
-    /// with a new value replaces it, one without leaves the old value
+    /// with a new value replaces it whole, one without leaves the old value
     /// standing, whatever the mask says. Naming them is all a client can do.
     pub fn unremovable_properties(&self, base: &Self) -> Vec<String> {
         let person = self;
-        let kept: Vec<String> = stash_lines(person)
-            .iter()
-            .map(|line| property_name(line))
-            .collect();
+
+        if !stash_lines(person).is_empty() {
+            return Vec::new();
+        }
 
         stash_lines(base)
             .iter()
             .map(|line| property_name(line))
-            .filter(|name| !kept.contains(name))
             .collect()
     }
 
@@ -1672,6 +1671,25 @@ mod tests {
             .person
             .changed_fields(&GpeoplePerson::from_vcard(base).unwrap().person);
         assert_eq!(fields, vec![GpeoplePersonField::ClientData]);
+    }
+
+    #[test]
+    fn a_new_stash_keeps_none_of_the_lines_it_drops() {
+        let base = "BEGIN:VCARD\r\nVERSION:4.0\r\nUID:urn:uuid:4fbe8971\r\nFN:X\r\n\
+            X-CUSTOM-FIELD:abc\r\nEND:VCARD\r\n";
+        let base = GpeoplePerson::from_vcard(base).unwrap().person;
+
+        let edited = "BEGIN:VCARD\r\nVERSION:4.0\r\nUID:urn:uuid:4fbe8971\r\nFN:X\r\n\
+            END:VCARD\r\n";
+        let edited = GpeoplePerson::from_vcard(edited).unwrap().person;
+        assert_eq!(edited.unremovable_properties(&base), Vec::<String>::new());
+
+        let bare = "BEGIN:VCARD\r\nVERSION:4.0\r\nFN:X\r\nEND:VCARD\r\n";
+        let bare = GpeoplePerson::from_vcard(bare).unwrap().person;
+        assert_eq!(
+            bare.unremovable_properties(&base),
+            vec!["UID", "X-CUSTOM-FIELD"]
+        );
     }
 
     #[test]

@@ -6,7 +6,7 @@ status: current
 
 # vCard projection
 
-What `GpeoplePerson::from_vcard` and `GpeoplePerson::to_vcard` keep of a vCard that People has no field for, what they never write, and what `GpeoplePerson::merge_unprojected` keeps of a person that its vCard does not show.
+What `GpeoplePerson::from_vcard` and `GpeoplePerson::to_vcard` keep of a vCard that People has no field for, what they never write, what `GpeoplePerson::merge_unprojected` keeps of a person that its vCard does not show, and which stashed properties `GpeoplePerson::unremovable_properties` names as left standing by an update.
 
 ### Requirement: The stash holds logical lines
 
@@ -148,3 +148,17 @@ An enum value the crate does not know (cairn/spec/responses.md) is server data n
 
 - **WHEN** the server's only nickname has an unknown type and the vCard changes its value
 - **THEN** the merged nickname holds the new value and the unknown type
+
+### Requirement: Only a stash left out of an update stands
+
+An update carrying a stash replaces the stored one whole, and an update carrying none leaves the stored one standing, whatever the mask says. `GpeoplePerson::unremovable_properties` SHALL name the property of each line of `base`'s stash when the person carries no stash, and SHALL name none when it carries one, whatever lines the two stashes share.
+
+#### Scenario: A stashed line dropped beside another
+
+- **WHEN** the base stash holds `UID` and `X-CUSTOM-FIELD`, and the person's stash holds `UID` alone
+- **THEN** `unremovable_properties` names nothing
+
+#### Scenario: Every stashed line dropped
+
+- **WHEN** the base stash holds `UID` and `X-CUSTOM-FIELD`, and the person carries no stash
+- **THEN** `unremovable_properties` names `UID` and `X-CUSTOM-FIELD`

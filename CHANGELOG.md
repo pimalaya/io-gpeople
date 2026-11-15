@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed `GpeoplePerson::unremovable_properties` naming the stashed properties an update drops while the person still carries a stash, which replaces the stored one whole: it now names them only when the person carries no stash.
+
 ## [0.8.0] - 2026-11-15
 
 ### Changed
