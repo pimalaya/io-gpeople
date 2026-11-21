@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-21
+
 ### Changed
 
 - Moved to io-http 0.9; `client` enables `io-http/client`.
@@ -229,7 +231,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the I/O-free coroutines for the Google People API v1: people, connections, contact groups and other contacts.
 - Added `PeopleClientStd`, a std blocking client behind the `client` feature.
 
-[unreleased]: https://github.com/pimalaya/io-gpeople/compare/v0.8.1..HEAD
+[unreleased]: https://github.com/pimalaya/io-gpeople/compare/v0.9.0..HEAD
+[0.9.0]: https://github.com/pimalaya/io-gpeople/compare/v0.8.1..v0.9.0
 [0.8.1]: https://github.com/pimalaya/io-gpeople/compare/v0.8.0..v0.8.1
 [0.8.0]: https://github.com/pimalaya/io-gpeople/compare/v0.7.0..v0.8.0
 [0.7.0]: https://github.com/pimalaya/io-gpeople/compare/v0.6.0..v0.7.0
