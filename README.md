@@ -4,9 +4,9 @@ Google People API client library for Rust
 
 This library is composed of 3 feature-gated layers:
 
-- Low-level **I/O-free** coroutines: no_std-compatible state machines containing the whole People API logic, usable anywhere
-- Mid-level **light client**: a standard, blocking client wrapping a stream you opened yourself
-- High-level **full client**: the light client plus TCP connections and TLS negotiations handled for you
+- Low-level **I/O-free** coroutines (`client` feature, enabled by default): no_std-compatible state machines containing the whole People API logic, usable anywhere
+- Mid-level **light client** (`std` feature): a standard, blocking client wrapping a stream you opened yourself
+- High-level **full client** (a TLS feature, `rustls-ring` by default): the light client plus TCP connections and TLS negotiations handled for you
 
 ## Table of contents
 
@@ -22,14 +22,14 @@ This library is composed of 3 feature-gated layers:
 
 ## Features
 
-- **I/O-free coroutines**: no_std state machines with no sockets and no async runtime, resumable from any blocking, async or in-memory test harness.
+- **I/O-free coroutines**: no_std state machines with no sockets and no async runtime, resumable from any blocking, async or in-memory test harness (requires `client` feature, enabled by default).
 - **Contacts**: create, read, update and delete personal contacts, one at a time or in batches.
 - **Contact groups**: create, read, update and delete groups, and move contacts in and out of them.
 - **Other contacts**: list and search the contacts Google collects automatically, and copy one into your personal contacts.
 - **Directory**: list and search the people shared across a Google Workspace organisation.
 - **Contact photos**: upload and delete a contact's photo.
 - **Incremental sync**: enumerate once, then pull only what changed with a sync token.
-- **Light client**: a standard, blocking client wrapping a stream you opened yourself.
+- **Light client**: a standard, blocking client wrapping a stream you opened yourself (requires `std` feature).
 - **Full client** with **TLS** support:
   - [Rustls](https://crates.io/crates/rustls) with ring crypto (requires `rustls-ring` feature, enabled by default)
   - [Rustls](https://crates.io/crates/rustls) with aws crypto (requires `rustls-aws` feature)

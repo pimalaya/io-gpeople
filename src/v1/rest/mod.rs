@@ -4,5 +4,6 @@
 //! <https://developers.google.com/people/api/rest>
 
 pub mod contact_groups;
+#[cfg(feature = "client")]
 pub mod other_contacts;
 pub mod people;

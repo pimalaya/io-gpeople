@@ -8,9 +8,11 @@
 //! network exchange is a resumable state machine that emits read and
 //! write requests instead of performing I/O itself: the caller owns
 //! the socket and pumps the coroutine with the bytes it read, whatever
-//! the runtime (blocking, async, in-memory tests). The `client`
-//! feature ships a ready-made std-blocking pump for callers who just
-//! want a working client.
+//! the runtime (blocking, async, in-memory tests). The coroutines sit
+//! behind the `client` feature (on by default); without it the crate
+//! keeps the `no_std` resource types and the `vcard` bridge. The `std`
+//! feature, implying `client`, ships a ready-made std-blocking pump for
+//! callers who just want a working client.
 //!
 //! [io-http]: https://docs.rs/io-http
 //!
@@ -88,7 +90,7 @@
 //!
 //! ## The std client
 //!
-//! The optional [`v1::client`] module (`client` feature) is the
+//! The optional [`v1::client`] module (`std` feature) is the
 //! std-blocking [`v1::client::GpeopleClientStd`]: a light client wrapping
 //! any stream you opened yourself, or a full client opening the TCP/TLS
 //! connection itself when a TLS feature (`rustls-ring` default,
@@ -106,8 +108,9 @@
 //! `requestMask.includeField` query parameter are deliberately omitted.
 
 extern crate alloc;
-#[cfg(feature = "client")]
+#[cfg(feature = "std")]
 extern crate std;
 
+#[cfg(feature = "client")]
 pub mod coroutine;
 pub mod v1;

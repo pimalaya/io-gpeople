@@ -30,7 +30,7 @@ Step 2 drops the optimistic-concurrency guard for that write: the refetched etag
 
 ### Requirement: No built-in etag retry
 
-`GpeopleContactUpdate` SHALL send the etag the person carries and SHALL surface an etag mismatch to its caller as the API error, without re-reading the person or retrying. The coroutines are I/O-free and the refetch-and-retry above trades safety for convenience, so each consumer implements it where it can see its own concurrency guard. The std `client` feature could grow an opt-in helper for it later.
+`GpeopleContactUpdate` SHALL send the etag the person carries and SHALL surface an etag mismatch to its caller as the API error, without re-reading the person or retrying. The coroutines are I/O-free and the refetch-and-retry above trades safety for convenience, so each consumer implements it where it can see its own concurrency guard. The `std` feature could grow an opt-in helper for it later.
 
 #### Scenario: Update guarded by a list etag
 

@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **BREAKING**: Renamed the `client` feature, which gated the blocking client, to `std`.
+
+  A consumer naming it moves to the new name:
+
+  ```toml
+  # before
+  io-gpeople = { version = "0.8", default-features = false, features = ["client"] }
+  # after
+  io-gpeople = { version = "0.9", default-features = false, features = ["std"] }
+  ```
+
+- **BREAKING**: Changed the `client` feature to gate the coroutines (`coroutine`, `v1::send`, `v1::query` and every method submodule of `v1::rest`, `v1::rest::other_contacts` included) and the base64-codec, io-http, log, thiserror and url dependencies.
+
+  It is on by default and implied by `std` and the TLS features. A consumer turning default features off to drive the coroutines itself adds it:
+
+  ```toml
+  # before
+  io-gpeople = { version = "0.8", default-features = false }
+  # after
+  io-gpeople = { version = "0.9", default-features = false, features = ["client"] }
+  ```
+
+  The resource types of `v1::rest` stay compiled without it, and so does the `vcard` bridge.
+
 ## [0.8.1] - 2026-11-15
 
 ### Fixed

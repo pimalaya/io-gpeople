@@ -1,6 +1,6 @@
 //! Std-blocking People client: wraps a `Read + Write` stream plus the
 //! bearer credential and runs the coroutines against
-//! `people.googleapis.com`. Gated behind the `client` feature.
+//! `people.googleapis.com`. Gated behind the `std` feature.
 
 #[cfg(any(
     feature = "rustls-aws",

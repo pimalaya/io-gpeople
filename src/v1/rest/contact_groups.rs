@@ -7,12 +7,19 @@ use alloc::{string::String, vec::Vec};
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "client")]
 pub mod batch_get;
+#[cfg(feature = "client")]
 pub mod create;
+#[cfg(feature = "client")]
 pub mod delete;
+#[cfg(feature = "client")]
 pub mod get;
+#[cfg(feature = "client")]
 pub mod list;
+#[cfg(feature = "client")]
 pub mod members;
+#[cfg(feature = "client")]
 pub mod update;
 
 use crate::v1::rest::people::GpeopleStatus;

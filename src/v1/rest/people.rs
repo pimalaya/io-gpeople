@@ -14,19 +14,33 @@ use alloc::{string::String, vec::Vec};
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "client")]
 pub mod batch_create_contacts;
+#[cfg(feature = "client")]
 pub mod batch_delete_contacts;
+#[cfg(feature = "client")]
 pub mod batch_update_contacts;
+#[cfg(feature = "client")]
 pub mod connections;
+#[cfg(feature = "client")]
 pub mod create_contact;
+#[cfg(feature = "client")]
 pub mod delete_contact;
+#[cfg(feature = "client")]
 pub mod delete_contact_photo;
+#[cfg(feature = "client")]
 pub mod get;
+#[cfg(feature = "client")]
 pub mod get_batch_get;
+#[cfg(feature = "client")]
 pub mod list_directory_people;
+#[cfg(feature = "client")]
 pub mod search_contacts;
+#[cfg(feature = "client")]
 pub mod search_directory_people;
+#[cfg(feature = "client")]
 pub mod update_contact;
+#[cfg(feature = "client")]
 pub mod update_contact_photo;
 #[cfg(feature = "vcard")]
 pub mod vcard;
