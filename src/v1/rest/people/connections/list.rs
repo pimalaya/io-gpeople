@@ -62,8 +62,9 @@ pub struct GpeopleConnectionsListResponse {
     /// Total number of people in the list without pagination.
     #[serde(default)]
     pub total_people: Option<u32>,
-    /// Total number of items in the list without pagination.
-    #[serde(default)]
+    /// Total number of items in the list without pagination, none when
+    /// unknown (a sync-token listing answers `-1`).
+    #[serde(default, deserialize_with = "crate::v1::rest::deserialize_total")]
     pub total_items: Option<u32>,
 }
 

@@ -629,6 +629,46 @@ fn an_unknown_group_type_does_not_fail_the_listing() {
 }
 
 #[test]
+fn a_negative_total_reads_as_unknown() {
+    let response = json_response(
+        "HTTP/1.1 200 OK",
+        r#"{"contactGroups":[{"resourceName":"contactGroups/abc","name":"Friends"}],"nextSyncToken":"sync-2","totalItems":-1}"#,
+    );
+    let params = GpeopleContactGroupsListParams {
+        sync_token: Some("sync-1"),
+        ..Default::default()
+    };
+    let mut coroutine = GpeopleContactGroupsList::new(&auth(), &[], &params).unwrap();
+    let (ret, _) = run(&mut coroutine, &response);
+    let page = ret.unwrap().response;
+    assert_eq!(page.contact_groups.len(), 1);
+    assert_eq!(page.next_sync_token.as_deref(), Some("sync-2"));
+    assert_eq!(page.total_items, None);
+
+    let response = json_response(
+        "HTTP/1.1 200 OK",
+        r#"{"connections":[{"resourceName":"people/c1"}],"nextSyncToken":"sync-2","totalItems":-1}"#,
+    );
+    let params = GpeopleConnectionsListParams {
+        sync_token: Some("sync-1"),
+        ..Default::default()
+    };
+    let mut coroutine =
+        GpeopleConnectionsList::new(&auth(), &[GpeoplePersonField::Names], &params).unwrap();
+    let (ret, _) = run(&mut coroutine, &response);
+    let page = ret.unwrap().response;
+    assert_eq!(page.connections.len(), 1);
+    assert_eq!(page.total_items, None);
+
+    let response = json_response("HTTP/1.1 200 OK", r#"{"connections":[],"totalItems":3}"#);
+    let params = GpeopleConnectionsListParams::default();
+    let mut coroutine =
+        GpeopleConnectionsList::new(&auth(), &[GpeoplePersonField::Names], &params).unwrap();
+    let (ret, _) = run(&mut coroutine, &response);
+    assert_eq!(ret.unwrap().response.total_items, Some(3));
+}
+
+#[test]
 fn an_unknown_enum_value_is_never_written_back() {
     let person: GpeoplePerson = serde_json::from_str(FUTURE_PERSON).unwrap();
     let fields = [GpeoplePersonField::Nicknames];

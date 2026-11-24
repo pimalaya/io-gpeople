@@ -46,8 +46,9 @@ pub struct GpeopleContactGroupsListResponse {
     /// Token to pass as `sync_token` on the next incremental sync.
     #[serde(default)]
     pub next_sync_token: Option<String>,
-    /// Total number of groups across all pages.
-    #[serde(default)]
+    /// Total number of groups across all pages, none when unknown (a
+    /// sync-token listing answers `-1`).
+    #[serde(default, deserialize_with = "crate::v1::rest::deserialize_total")]
     pub total_items: Option<u32>,
 }
 

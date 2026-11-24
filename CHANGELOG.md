@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- A contact-groups or connections listing whose `totalItems` is negative (`-1` on a sync-token listing) no longer fails to parse: `total_items` reads it as `None`.
+
 ## [0.9.0] - 2026-11-21
 
 ### Changed

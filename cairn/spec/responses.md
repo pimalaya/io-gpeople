@@ -30,3 +30,12 @@ A 2xx response without a body SHALL be read as `{}`: `GpeopleNoResponse` ignores
 
 - **WHEN** `GpeopleContactPhotoDelete` receives a 200 with an empty body
 - **THEN** it completes with a response whose `person` is `None`
+
+### Requirement: An unknown listing total reads as none
+
+`total_items` on `GpeopleContactGroupsListResponse` and `GpeopleConnectionsListResponse` SHALL read a value outside `u32` (the `-1` People answers on a sync-token listing) as `None` rather than fail the page. The field stays `Option<u32>`.
+
+#### Scenario: A sync-token listing
+
+- **WHEN** a contact-groups or connections listing page holds `"totalItems": -1`
+- **THEN** the page parses, its groups or connections are read, and `total_items` is `None`
